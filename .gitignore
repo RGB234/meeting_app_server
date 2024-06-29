@@ -1,3 +1,6 @@
+# TypeOrmModule.forRoot
+/src/app.module.ts
+
 # compiled output
 /dist
 /node_modules
