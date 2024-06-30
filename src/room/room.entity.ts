@@ -8,7 +8,9 @@ export class Room {
   @PrimaryGeneratedColumn({ type: 'int' })
   id: number;
 
-  @OneToMany(() => UserToRoom, (UserToRoom) => UserToRoom.room)
+  @OneToMany(() => UserToRoom, (UserToRoom) => UserToRoom.room, {
+    cascade: true,
+  })
   public userToRooms: UserToRoom[];
 
   @OneToMany(() => Message, (message) => message.room)

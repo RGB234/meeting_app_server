@@ -30,7 +30,11 @@ export class User {
   @JoinColumn()
   authentication: Authentication;
 
-  @OneToMany(() => UserToRoom, (UserToRoom) => UserToRoom.user)
+  @OneToMany(() => UserToRoom, (UserToRoom) => UserToRoom.user, {
+    // Setting cascade: true will enable full cascades.
+    // ['update', 'insert', 'remove', 'soft-remove', 'recover'],
+    cascade: true,
+  })
   public userToRooms: UserToRoom[];
 
   @OneToMany(() => Message, (message) => message.user)

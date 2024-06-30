@@ -11,7 +11,7 @@ import {
 
 @Entity()
 export class Message {
-  @PrimaryColumn()
+  @PrimaryGeneratedColumn()
   id: number;
 
   // @Column()
@@ -24,7 +24,7 @@ export class Message {
   // writerID: number;
 
   @ManyToOne(() => User, (user) => user.messages)
-  @JoinColumn({ name: 'id', referencedColumnName: 'writerID' })
+  @JoinColumn({ name: 'writerId', referencedColumnName: 'id' })
   user: User;
 
   @Column()
