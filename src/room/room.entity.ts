@@ -6,7 +6,7 @@ import { Message } from 'src/chat/message.entity';
 export class Room {
   // bigint column type, used in SQL databases, doesn't fit into the regular number type and maps property to a string instead.
   @PrimaryGeneratedColumn({ type: 'int' })
-  roomID: number;
+  id: number;
 
   @OneToMany(() => UserToRoom, (UserToRoom) => UserToRoom.room)
   public userToRooms: UserToRoom[];

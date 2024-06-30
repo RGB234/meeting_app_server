@@ -17,7 +17,7 @@ export class User {
   // Primary column name must match the relation name + join column name on related entity
   // ref. https://stackoverflow.com/questions/72764116/create-a-primary-key-for-a-one-to-one-relationship
   @PrimaryColumn({ type: 'int' })
-  uid: number;
+  id: number;
 
   // Note, inverse relation does not have a @JoinColumn.
   // @JoinColumn must only be on one side of the relation - on the table that will own the foreign key.
