@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Message } from './message.entity';
-import { DataSource, Repository } from 'typeorm';
+import { Auth, DataSource, Repository } from 'typeorm';
 import { CreateMessageDto } from './create-message-dto';
 import { Room } from 'src/room/room.entity';
 import { User } from 'src/user/user.entity';
+import { Authentication } from 'src/authentication/authentication.entity';
+import { UUID } from 'crypto';
 
 @Injectable()
 export class ChatService {
@@ -19,14 +21,26 @@ export class ChatService {
 
     @InjectRepository(User)
     private userRepository: Repository<User>,
+
+    @InjectRepository(Authentication)
+    private authRepository: Repository<Authentication>,
   ) {}
 
   findAllMessages(): Promise<Message[]> {
     return this.messagesRepository.find();
   }
 
-  findOneMessage(id: number): Promise<Message | null> {
-    return this.messagesRepository.findOneBy({ id });
+  async findOneMessage(
+    roomId: number,
+    writerId: UUID,
+  ): Promise<Message | null> {
+    const _room = await this.roomRepository.findOneBy({ id: roomId });
+    const _user = await this.userRepository.findOneBy({
+      authentication: await this.authRepository.findOneBy({
+        uid: writerId,
+      }),
+    });
+    return this.messagesRepository.findOneBy({ room: _room, user: _user });
   }
 
   async removeMessage(id: number): Promise<void> {
@@ -35,12 +49,15 @@ export class ChatService {
 
   async createMessage(createMessageDto: CreateMessageDto): Promise<Message> {
     const newMessage = new Message();
-    newMessage.id = createMessageDto.id;
+    // newMessage.id = createMessageDto.id;
+    // **********************
     newMessage.room = await this.roomRepository.findOneBy({
       id: createMessageDto.roomId,
     });
     newMessage.user = await this.userRepository.findOneBy({
-      id: createMessageDto.id,
+      authentication: await this.authRepository.findOneBy({
+        uid: createMessageDto.writerId,
+      }),
     });
     newMessage.createdAt = createMessageDto.createdAt;
     newMessage.deleted = createMessageDto.deleted;

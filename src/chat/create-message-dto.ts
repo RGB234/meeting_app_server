@@ -5,12 +5,15 @@ import {
   IsNumber,
   IsString,
 } from 'class-validator';
+import { UUID } from 'crypto';
 
 export class CreateMessageDto {
   // By default, all of these fields are required.
-  @IsNotEmpty()
-  @IsNumber()
-  id: number;
+
+  // PK
+  // @IsNotEmpty()
+  // @IsNumber()
+  // id: number;
 
   @IsNotEmpty()
   @IsNumber()
@@ -18,7 +21,7 @@ export class CreateMessageDto {
 
   @IsNotEmpty()
   @IsNumber()
-  writerId: number;
+  writerId: UUID;
 
   @IsDate()
   createdAt: Date;

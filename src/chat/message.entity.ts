@@ -11,20 +11,22 @@ import {
 
 @Entity()
 export class Message {
-  @PrimaryGeneratedColumn()
-  id: number;
+  // @PrimaryGeneratedColumn()
+  // id: number;
 
   // @Column()
   // roomID: number;
 
+  @PrimaryColumn({ type: 'varchar' })
   @ManyToOne(() => Room, (room) => room.messages)
   room: Room;
 
   // @Column()
   // writerID: number;
 
+  @PrimaryColumn({ type: 'varchar' })
   @ManyToOne(() => User, (user) => user.messages)
-  @JoinColumn({ name: 'writerId', referencedColumnName: 'id' })
+  @JoinColumn({ name: 'writer', referencedColumnName: 'authentication' })
   user: User;
 
   @Column()
