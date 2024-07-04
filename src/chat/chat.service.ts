@@ -5,7 +5,7 @@ import { Auth, DataSource, Repository } from 'typeorm';
 import { CreateMessageDto } from './create-message-dto';
 import { Room } from 'src/room/room.entity';
 import { User } from 'src/user/user.entity';
-import { Authentication } from 'src/authentication/authentication.entity';
+import { Authentication } from 'src/authentication/auth.entity';
 import { UUID } from 'crypto';
 
 @Injectable()
@@ -37,7 +37,7 @@ export class ChatService {
     const _room = await this.roomRepository.findOneBy({ id: roomId });
     const _user = await this.userRepository.findOneBy({
       authentication: await this.authRepository.findOneBy({
-        uid: writerId,
+        id: writerId,
       }),
     });
     return this.messagesRepository.findOneBy({ room: _room, user: _user });
@@ -56,7 +56,7 @@ export class ChatService {
     });
     newMessage.user = await this.userRepository.findOneBy({
       authentication: await this.authRepository.findOneBy({
-        uid: createMessageDto.writerId,
+        id: createMessageDto.writerId,
       }),
     });
     newMessage.createdAt = createMessageDto.createdAt;

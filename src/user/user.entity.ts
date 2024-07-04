@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { Authentication } from 'src/authentication/authentication.entity';
+import { Authentication } from 'src/authentication/auth.entity';
 import { Message } from 'src/chat/message.entity';
 import { UserToRoom } from 'src/room/userToRoom.entity';
 
@@ -14,23 +14,25 @@ import {
 
 @Entity()
 export class User {
+  @PrimaryColumn({ type: 'char' })
+  id: string;
   // Primary column name must match the relation name + join column name on related entity
   // ref. https://stackoverflow.com/questions/72764116/create-a-primary-key-for-a-one-to-one-relationship
-  // @PrimaryColumn({ type: 'int' })
-  // id: number;
 
-  // Note, inverse relation does not have a @JoinColumn.
-  // @JoinColumn must only be on one side of the relation - on the table that will own the foreign key.
+  // %%%%%%%%%%%%%%%
 
-  // This is a Uni-directional relation
-  // cf. Bi-directional relations allow you to join relations from both sides using QueryBuilder
-  @PrimaryColumn({ type: 'char' })
   @OneToOne(() => Authentication, {
+    // set cascade remove only from one side of relationship.
     cascade: true,
   })
+  // @JoinColumn must only be on one side of the relation - on the table that will own the foreign key.
+  // Note, inverse relation does not have a @JoinColumn.
   @JoinColumn()
   authentication: Authentication;
 
+  // %%%%%%%%%%%%%%%
+
+  // To CACADE delete when a user's account is deleted
   @OneToMany(() => UserToRoom, (userToRoom) => userToRoom.user, {
     // Setting cascade: true will enable full cascades.
     // ['update', 'insert', 'remove', 'soft-remove', 'recover'],

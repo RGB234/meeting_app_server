@@ -4,7 +4,7 @@ import { UUID } from 'crypto';
 export class CreateUserDto {
   // PK, FK
   @IsUUID()
-  uid: UUID;
+  id: UUID;
 
   @IsString()
   nickname: string;

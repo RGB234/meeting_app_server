@@ -1,18 +1,21 @@
 import {
   Body,
+  ClassSerializerInterceptor,
   Controller,
   Post,
+  UseInterceptors,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { Authentication } from './authentication.entity';
+import { Authentication } from './auth.entity';
 import { CreateAccountDto } from './create-account-dto';
 
 @Controller('authentication')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @UseInterceptors(ClassSerializerInterceptor)
   @Post('create')
   @UsePipes(
     new ValidationPipe({

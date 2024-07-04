@@ -5,7 +5,7 @@ import { ChatService } from './chat.service';
 import { ChatController } from './chat.contorller';
 import { Room } from 'src/room/room.entity';
 import { User } from 'src/user/user.entity';
-import { Authentication } from 'src/authentication/authentication.entity';
+import { Authentication } from 'src/authentication/auth.entity';
 import { UserToRoom } from 'src/room/userToRoom.entity';
 
 @Module({

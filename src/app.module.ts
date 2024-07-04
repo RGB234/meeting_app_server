@@ -4,8 +4,8 @@ import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChatModule } from './chat/chat.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthModule } from './authentication/auth.module';
 import { UserModule } from './user/user.module';
+import { AuthModule } from './authentication/auth.module';
 
 @Module({
   imports: [
@@ -24,14 +24,14 @@ import { UserModule } from './user/user.module';
         // With that option specified, every entity registered through the forFeature() method
         // will be automatically added to the entities array of the configuration object.
         autoLoadEntities: true,
-        // entities: [Authentication, User, Room, UserToRoom, Message],
+        // entities: [User, Profile, Room, ProfileToRoom, Message],
         retryAttempts: 3,
       }),
       inject: [ConfigService],
     }),
     ChatModule,
-    AuthModule,
     UserModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
