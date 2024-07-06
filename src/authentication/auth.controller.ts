@@ -1,7 +1,9 @@
 import {
+  BadRequestException,
   Body,
   ClassSerializerInterceptor,
   Controller,
+  Delete,
   Post,
   UseInterceptors,
   UsePipes,
@@ -10,6 +12,7 @@ import {
 import { AuthService } from './auth.service';
 import { Authentication } from './auth.entity';
 import { CreateAccountDto } from './create-account-dto';
+import { DeleteAccountDto } from './delete-account-dto';
 
 @Controller('authentication')
 export class AuthController {
@@ -29,5 +32,26 @@ export class AuthController {
   ): Promise<Authentication> {
     console.log(createAccountDto);
     return await this.authService.createAccount(createAccountDto);
+  }
+
+  @Delete('delete')
+  @UsePipes(
+    new ValidationPipe({
+      whitelist: true,
+    }),
+  )
+  async DeleteAccountDto(
+    @Body() deleteAccountDto: DeleteAccountDto,
+  ): Promise<void> {
+    try {
+      return await this.authService.deleteAccount(deleteAccountDto);
+    } catch (err) {
+      if (err instanceof BadRequestException) {
+        console.log(err.message);
+        throw err;
+      } else {
+        throw err;
+      }
+    }
   }
 }

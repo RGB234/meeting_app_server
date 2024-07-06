@@ -2,9 +2,8 @@ import { IsDate, IsNumber, IsString, IsUUID } from 'class-validator';
 import { UUID } from 'crypto';
 
 export class CreateUserDto {
-  // PK, FK
   @IsUUID()
-  id: UUID;
+  authenticationId: UUID;
 
   @IsString()
   nickname: string;

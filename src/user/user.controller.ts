@@ -21,7 +21,7 @@ export class UserController {
       whitelist: true,
     }),
   )
-  async postUser(@Body() createUserDto: CreateUserDto): Promise<User> {
+  async postUser(@Body() createUserDto: CreateUserDto): Promise<User | null> {
     console.log(createUserDto);
     return await this.userService.createUser(createUserDto);
   }
