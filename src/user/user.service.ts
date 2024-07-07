@@ -17,19 +17,6 @@ export class UserService {
   ) {}
 
   async createUser(createUserDto: CreateUserDto): Promise<User> {
-    // const newUser = new User();
-
-    // newUser.account = createUserDto.account;
-    // newUser.affiliation = createUserDto.affiliation;
-    // newUser.authentication = await this.authRepository.findOneBy({
-    //   id: createUserDto.id,
-    // });
-    // newUser.birthday = createUserDto.birthday;
-    // newUser.gender = createUserDto.gender;
-    // newUser.name = createUserDto.name;
-    // newUser.nickname = createUserDto.nickname;
-    // newUser.phoneNum = createUserDto.phoneNum;
-    // newUser.photoURL = createUserDto.photoURL;
     let auth: Authentication | null = null;
 
     try {
@@ -48,16 +35,10 @@ export class UserService {
       );
       return;
     }
-    console.log('<auth>');
-    console.log(auth);
-
     const newUser = this.userRepository.create({
       ...createUserDto,
       authentication: auth,
     });
-
-    console.log('<newUser>');
-    console.log(newUser);
 
     return await this.datasoure.manager.save(newUser);
   }

@@ -17,26 +17,16 @@ import {
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
-  // Primary column name must match the relation name + join column name on related entity
-  // ref. https://stackoverflow.com/questions/72764116/create-a-primary-key-for-a-one-to-one-relationship
-  // ref. https://dev.to/marienoir/understanding-relationships-in-typeorm-4873
 
-  // %%%%%%%%%%%%%%%
   // PrimaryColumn decoration on OneToOne directly does not work
   @OneToOne(() => Authentication, (auth) => auth.user, {
     // set cascade remove only from one side of relationship.
-
-    // cascade: true,
-
     onDelete: 'CASCADE',
-
-    orphanedRowAction: 'delete',
   })
   // @JoinColumn must only be on one side of the relation - on the table that will own the foreign key.
   // Note, inverse relation does not have a @JoinColumn.
   @JoinColumn({ name: 'authenticationId', referencedColumnName: 'id' })
   authentication: Authentication;
-  // %%%%%%%%%%%%%%%
 
   // To CACADE delete when a user's account is deleted
   @OneToMany(() => UserToRoom, (userToRoom) => userToRoom.user, {

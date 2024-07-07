@@ -38,7 +38,8 @@ export class AuthService {
     } else if (auth.password != deleteAccountDto.password) {
       throw new BadRequestException('Incorrect Password');
     } else {
-      // You have to delete referencing side to take cascade deletion to take in effect
+      // TypeORM only sets up database-level cascading relations when a column is initially being created.
+      // You might have to use migrations to make sure it is set correctly after the fact.
       await this.datasource.manager.delete(Authentication, {
         id: deleteAccountDto.authenticationId,
       });
