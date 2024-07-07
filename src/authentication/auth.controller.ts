@@ -20,13 +20,13 @@ export class AuthController {
 
   @UseInterceptors(ClassSerializerInterceptor)
   @Post('create')
-  @UsePipes(
-    new ValidationPipe({
-      // transform: true,
-      // If set 'whitelist' to true, validator will strip validated (returned) object of any properties that do not use any validation decorators.
-      whitelist: true,
-    }),
-  )
+  // @UsePipes(
+  //   new ValidationPipe({
+  //     // transform: true,
+  //     // If set 'whitelist' to true, validator will strip validated (returned) object of any properties that do not use any validation decorators.
+  //     whitelist: true,
+  //   }),
+  // )
   async postAccount(
     @Body() createAccountDto: CreateAccountDto,
   ): Promise<Authentication> {
@@ -35,11 +35,11 @@ export class AuthController {
   }
 
   @Delete('delete')
-  @UsePipes(
-    new ValidationPipe({
-      whitelist: true,
-    }),
-  )
+  // @UsePipes(
+  //   new ValidationPipe({
+  //     whitelist: true,
+  //   }),
+  // )
   async DeleteAccountDto(
     @Body() deleteAccountDto: DeleteAccountDto,
   ): Promise<void> {

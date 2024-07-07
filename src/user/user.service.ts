@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Auth, DataSource, Repository } from 'typeorm';
 import { User } from './user.entity';
 import { CreateUserDto } from './create-user-dto';
 import { Authentication } from 'src/authentication/auth.entity';
+import { UpdateUserDto } from './update-user-dto';
 
 @Injectable()
 export class UserService {
@@ -25,15 +26,14 @@ export class UserService {
       });
 
       if (auth == null) {
-        console.log('Auth id Not Fount');
-        return;
+        throw new BadRequestException('Auth id Not Found');
       }
     } catch (error) {
-      console.log(
-        `Error (Finding Authentication data by id(${createUserDto.authenticationId}) Failed)`,
-        error,
-      );
-      return;
+      // console.log(
+      //   `Error (Finding Authentication data by id(${createUserDto.authenticationId}) Failed)`,
+      //   error,
+      // );
+      throw error;
     }
     const newUser = this.userRepository.create({
       ...createUserDto,
@@ -41,5 +41,29 @@ export class UserService {
     });
 
     return await this.datasoure.manager.save(newUser);
+  }
+
+  async updateUser(updateUserDto: UpdateUserDto): Promise<void> {
+    const { authenticationId, ...updateProperties } = updateUserDto;
+    const auth = await this.authRepository.findOneBy({
+      id: updateUserDto.authenticationId,
+    });
+
+    if (auth != null) {
+      try {
+        const updateResult = await this.userRepository.update(
+          {
+            authentication: auth,
+          },
+          updateProperties,
+        );
+        console.log(updateResult);
+      } catch (error) {
+        console.log(error);
+        throw error;
+      }
+    } else {
+      throw new BadRequestException('Invalid Authentication id');
+    }
   }
 }
