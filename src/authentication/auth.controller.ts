@@ -4,9 +4,12 @@ import {
   ClassSerializerInterceptor,
   Controller,
   Delete,
+  HttpCode,
+  HttpStatus,
   Patch,
   Post,
   Put,
+  UseGuards,
   UseInterceptors,
   UsePipes,
   ValidationPipe,
@@ -17,10 +20,18 @@ import { CreateAccountDto } from './create-account-dto';
 import { DeleteAccountDto } from './delete-account-dto';
 import { UpdateAccountDto } from './update-account-dto';
 import { DeleteResult, UpdateResult } from 'typeorm';
+import { signInDto } from './signIn-dto';
+import { AuthGuard } from './auth.guard';
 
-@Controller('authentication')
+@Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @HttpCode(HttpStatus.OK)
+  @Post('login')
+  signIn(@Body() signInDto: signInDto) {
+    return this.authService.signIn(signInDto);
+  }
 
   // @UseInterceptors(ClassSerializerInterceptor)
   @Post('create')
@@ -38,6 +49,7 @@ export class AuthController {
     return await this.authService.createAccount(createAccountDto);
   }
 
+  @UseGuards(AuthGuard)
   @Patch('password')
   async updateAccount(
     @Body() updateAccountDto: UpdateAccountDto,

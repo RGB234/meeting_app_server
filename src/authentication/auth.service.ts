@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, DeleteResult, Repository, UpdateResult } from 'typeorm';
 import { Authentication } from './auth.entity';
@@ -6,15 +10,31 @@ import { CreateAccountDto } from './create-account-dto';
 import { DeleteAccountDto } from './delete-account-dto';
 import { User } from 'src/user/user.entity';
 import { UpdateAccountDto } from './update-account-dto';
+import { signInDto } from './signIn-dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
   constructor(
     private datasource: DataSource,
+    private jwtService: JwtService,
 
     @InjectRepository(Authentication)
     private authRepository: Repository<Authentication>,
   ) {}
+
+  async signIn(signInDto: signInDto): Promise<{ access_token: string }> {
+    const auth = await this.authRepository.findOneBy({
+      email: signInDto.email,
+    });
+    if (auth?.password !== signInDto.password) {
+      throw new UnauthorizedException();
+    }
+    const payload = { sub: auth.id, authEmail: auth.email };
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+    };
+  }
 
   async createAccount(
     createAccountDto: CreateAccountDto,
