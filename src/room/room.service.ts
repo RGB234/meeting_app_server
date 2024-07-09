@@ -14,13 +14,7 @@ export class RoomService {
   ) {}
 
   async createRoom(createdRoomDto: CreateRoomDto): Promise<Room> {
-    const newRoom = new Room();
-    newRoom.managerID = createdRoomDto.managerID;
-    newRoom.title = createdRoomDto.title;
-    newRoom.createdAt = createdRoomDto.createdAt;
-    newRoom.maxFemaleCount = createdRoomDto.maxFemaleCount;
-    newRoom.maxMaleCount = createdRoomDto.maxMaleCount;
-
+    const newRoom = this.roomRepository.create(createdRoomDto);
     return await this.datasource.manager.save(newRoom);
   }
 }

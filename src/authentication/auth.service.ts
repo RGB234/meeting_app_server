@@ -1,10 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, DeleteResult, Repository, UpdateResult } from 'typeorm';
 import { Authentication } from './auth.entity';
 import { CreateAccountDto } from './create-account-dto';
 import { DeleteAccountDto } from './delete-account-dto';
 import { User } from 'src/user/user.entity';
+import { UpdateAccountDto } from './update-account-dto';
 
 @Injectable()
 export class AuthService {
@@ -27,7 +28,22 @@ export class AuthService {
     return await this.authRepository.save(newAccount);
   }
 
-  async deleteAccount(deleteAccountDto: DeleteAccountDto): Promise<void> {
+  async changePassword(
+    updateAccountDto: UpdateAccountDto,
+  ): Promise<UpdateResult> {
+    if (await this.authRepository.existsBy({ email: updateAccountDto.email })) {
+      return await this.authRepository.update(
+        { email: updateAccountDto.email },
+        updateAccountDto,
+      );
+    } else {
+      throw new BadRequestException('Invalid Email (NOT FOUND)');
+    }
+  }
+
+  async deleteAccount(
+    deleteAccountDto: DeleteAccountDto,
+  ): Promise<DeleteResult> {
     const auth = await this.datasource.manager.findOneBy(Authentication, {
       id: deleteAccountDto.authenticationId,
     });
@@ -40,11 +56,14 @@ export class AuthService {
     } else {
       // TypeORM only sets up database-level cascading relations when a column is initially being created.
       // You might have to use migrations to make sure it is set correctly after the fact.
-      await this.datasource.manager.delete(Authentication, {
-        id: deleteAccountDto.authenticationId,
-      });
+      const deleteResult = await this.datasource.manager.delete(
+        Authentication,
+        {
+          id: deleteAccountDto.authenticationId,
+        },
+      );
+      return deleteResult;
     }
-    return;
   }
 
   async softDeleteAccount() {}
