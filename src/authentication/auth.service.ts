@@ -23,7 +23,7 @@ export class AuthService {
     private authRepository: Repository<Authentication>,
   ) {}
 
-  async signIn(signInDto: signInDto): Promise<{ access_token: string }> {
+  async login(signInDto: signInDto): Promise<{ access_token: string }> {
     const auth = await this.authRepository.findOneBy({
       email: signInDto.email,
     });

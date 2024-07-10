@@ -1,16 +1,14 @@
 import {
   BadRequestException,
   Body,
-  ClassSerializerInterceptor,
   Controller,
   Delete,
   HttpCode,
   HttpStatus,
   Patch,
   Post,
-  Put,
+  Request,
   UseGuards,
-  UseInterceptors,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
@@ -22,6 +20,7 @@ import { UpdateAccountDto } from './update-account-dto';
 import { DeleteResult, UpdateResult } from 'typeorm';
 import { signInDto } from './signIn-dto';
 import { AuthGuard } from './auth.guard';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -30,7 +29,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('login')
   signIn(@Body() signInDto: signInDto) {
-    return this.authService.signIn(signInDto);
+    return this.authService.login(signInDto);
   }
 
   // @UseInterceptors(ClassSerializerInterceptor)
@@ -50,10 +49,13 @@ export class AuthController {
   }
 
   @UseGuards(AuthGuard)
+  // @UseGuards(JwtAuthGuard)
   @Patch('password')
   async updateAccount(
     @Body() updateAccountDto: UpdateAccountDto,
+    @Request() req,
   ): Promise<UpdateResult> {
+    console.log(req.user);
     return await this.authService.changePassword(updateAccountDto);
   }
 
