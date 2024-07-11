@@ -21,11 +21,13 @@ import { DeleteResult, UpdateResult } from 'typeorm';
 import { signInDto } from './signIn-dto';
 import { AuthGuard } from './auth.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { Public } from './auth.decorator';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @HttpCode(HttpStatus.OK)
   @Post('login')
   signIn(@Body() signInDto: signInDto) {
@@ -48,7 +50,7 @@ export class AuthController {
     return await this.authService.createAccount(createAccountDto);
   }
 
-  @UseGuards(AuthGuard)
+  // @UseGuards(AuthGuard)
   // @UseGuards(JwtAuthGuard)
   @Patch('password')
   async updateAccount(
