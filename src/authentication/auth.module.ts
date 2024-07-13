@@ -4,10 +4,11 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { Authentication } from './auth.entity';
 import { JwtModule } from '@nestjs/jwt';
-import { JwtStrategy } from './jwt.strategy';
+import { JwtAccessTokenStrategy } from './jwt-access-token.strategy';
 import { APP_GUARD } from '@nestjs/core';
-import { AuthGuard } from './auth.guard';
-import { JwtAuthGuard } from './jwt-auth.guard';
+import { JwtAccessTokenGuard } from './jwt-access-token.guard';
+import { JwtRefreshTokenStrategy } from './jwt-refresh-token.strategy';
+import { JwtRefreshTokenGuard } from './jwt-refresh-token.guard';
 
 @Module({
   imports: [
@@ -16,22 +17,25 @@ import { JwtAuthGuard } from './jwt-auth.guard';
       // registering the JwtModule as global to make things easier for us.
       // This means that we don't need to import the JwtModule anywhere else in our application.
       global: true,
-      secret: process.env.JWT_CONSTANTS,
+      secret: process.env.JWT_ACCESS_SECRET,
       signOptions: {
-        expiresIn: '600s', // token expiration time
+        expiresIn: process.env.JWT_ACCESS_EXP, // token expiration time
       },
     }),
   ],
   providers: [
     AuthService,
-    JwtStrategy,
+    JwtAccessTokenStrategy,
+    JwtRefreshTokenStrategy,
     // register the AuthGuard as a global guard
     // using the following construction in any module
     {
       provide: APP_GUARD,
-      // ./auth.guard';
-      // useClass: AuthGuard,
-      useClass: JwtAuthGuard,
+      useClass: JwtAccessTokenGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtRefreshTokenGuard,
     },
   ],
   controllers: [AuthController],

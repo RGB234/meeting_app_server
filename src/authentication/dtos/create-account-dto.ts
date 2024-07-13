@@ -1,5 +1,5 @@
 import { ApiProperty, ApiSecurity } from '@nestjs/swagger';
-import { IS_STRING, IsEmail, IsString, IsUUID } from 'class-validator';
+import { IS_STRING, IsDate, IsEmail, IsString, IsUUID } from 'class-validator';
 // import { UUID } from 'crypto';
 
 export class CreateAccountDto {
@@ -15,4 +15,12 @@ export class CreateAccountDto {
   @ApiProperty()
   @IsString()
   password: string;
+
+  @ApiProperty()
+  @IsString()
+  refreshToken: string = null;
+
+  @ApiProperty()
+  @IsDate()
+  refreshTokenEXP: Date = null;
 }

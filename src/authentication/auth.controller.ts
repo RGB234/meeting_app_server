@@ -8,20 +8,17 @@ import {
   Patch,
   Post,
   Request,
-  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Authentication } from './auth.entity';
-import { CreateAccountDto } from './create-account-dto';
-import { DeleteAccountDto } from './delete-account-dto';
-import { UpdateAccountDto } from './update-account-dto';
+import { CreateAccountDto } from './dtos/create-account-dto';
+import { DeleteAccountDto } from './dtos/delete-account-dto';
+import { UpdateAccountDto } from './dtos/update-account-dto';
 import { DeleteResult, UpdateResult } from 'typeorm';
-import { signInDto } from './signIn-dto';
-import { AuthGuard } from './auth.guard';
-import { JwtAuthGuard } from './jwt-auth.guard';
 import { Public } from './auth.decorator';
+import { LoginDto } from './dtos/login-dto';
 
 @Controller('auth')
 export class AuthController {
@@ -30,8 +27,8 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  signIn(@Body() signInDto: signInDto) {
-    return this.authService.login(signInDto);
+  signIn(@Body() loginDto: LoginDto) {
+    return this.authService.login(loginDto);
   }
 
   // @UseInterceptors(ClassSerializerInterceptor)
@@ -58,7 +55,7 @@ export class AuthController {
     @Request() req,
   ): Promise<UpdateResult> {
     console.log(req.user);
-    return await this.authService.changePassword(updateAccountDto);
+    return await this.authService.updateAccount(updateAccountDto);
   }
 
   @Delete('delete')
