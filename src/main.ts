@@ -2,15 +2,17 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 
+import * as cookieParser from 'cookie-parser';
+// import * as dotenv from 'dotenv';
+
+// // .env file load
+// dotenv.config();
+
 declare const module: any;
-
-import * as dotenv from 'dotenv';
-
-// .env file load
-dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.use(cookieParser());
   await app.listen(3000);
 
   app.useGlobalPipes(

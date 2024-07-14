@@ -9,34 +9,47 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAccessTokenGuard } from './jwt-access-token.guard';
 import { JwtRefreshTokenStrategy } from './jwt-refresh-token.strategy';
 import { JwtRefreshTokenGuard } from './jwt-refresh-token.guard';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Authentication]),
-    JwtModule.register({
-      // registering the JwtModule as global to make things easier for us.
-      // This means that we don't need to import the JwtModule anywhere else in our application.
-      global: true,
-      secret: process.env.JWT_ACCESS_SECRET,
-      signOptions: {
-        expiresIn: process.env.JWT_ACCESS_EXP, // token expiration time
-      },
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_ACCESS_SECRET'),
+        signOptions: {
+          expiresIn: configService.get<string>('JWT_ACCESS_EXP'),
+        },
+      }),
     }),
+    // JwtModule.register({
+    //   // registering the JwtModule as global to make things easier for us.
+    //   // This means that we don't need to import the JwtModule anywhere else in our application.
+    //   global: true,
+    //   // secret: process.env.JWT_ACCESS_SECRET,
+    //   // signOptions: {
+    //   //   expiresIn: process.env.JWT_ACCESS_EXP, // token expiration time
+    //   // },
+    // }),
   ],
   providers: [
     AuthService,
     JwtAccessTokenStrategy,
     JwtRefreshTokenStrategy,
-    // register the AuthGuard as a global guard
+    JwtAccessTokenGuard,
+    JwtRefreshTokenGuard,
+    // register the Guard as a global guard
     // using the following construction in any module
     {
       provide: APP_GUARD,
       useClass: JwtAccessTokenGuard,
     },
-    {
-      provide: APP_GUARD,
-      useClass: JwtRefreshTokenGuard,
-    },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: JwtRefreshTokenGuard,
+    // },
   ],
   controllers: [AuthController],
   exports: [AuthService],

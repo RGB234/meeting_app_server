@@ -8,7 +8,7 @@ import { Request } from 'express';
 @Injectable()
 export class JwtRefreshTokenStrategy extends PassportStrategy(
   Strategy,
-  'refresh_token',
+  'jwt_refresh_token',
 ) {
   constructor(
     private readonly configSerivce: ConfigService,
@@ -17,12 +17,13 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         (request) => {
-          console.log(request?.cookies);
+          console.log('Refresh token > ', request?.cookies?.refresh_token);
           return request?.cookies?.refresh_token;
         },
       ]),
       ignoreExpiration: false,
-      secretOrkey: configSerivce.get<string>('JWT_REFRESH_SECRET'),
+      secretOrKey: configSerivce.get<string>('JWT_REFRESH_SECRET'),
+      passReqToCallback: true,
     });
   }
 
@@ -33,7 +34,8 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
       refreshToken,
     );
     if (!isValid) throw new UnauthorizedException('Invalid refresh token');
-
+    // request 에 payload 저장
+    req.user = payload;
     return payload;
   }
 }

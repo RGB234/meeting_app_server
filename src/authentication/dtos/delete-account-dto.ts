@@ -2,7 +2,7 @@ import { IsString, IsUUID } from 'class-validator';
 
 export class DeleteAccountDto {
   @IsUUID()
-  authenticationId: string;
+  authId: string;
 
   @IsString()
   password: string;

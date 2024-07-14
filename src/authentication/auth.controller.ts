@@ -7,7 +7,10 @@ import {
   HttpStatus,
   Patch,
   Post,
+  Req,
   Request,
+  Res,
+  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
@@ -19,6 +22,9 @@ import { UpdateAccountDto } from './dtos/update-account-dto';
 import { DeleteResult, UpdateResult } from 'typeorm';
 import { Public } from './auth.decorator';
 import { LoginDto } from './dtos/login-dto';
+import { Response } from 'express';
+import { JwtRefreshTokenGuard } from './jwt-refresh-token.guard';
+import { JwtAccessTokenGuard } from './jwt-access-token.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -27,8 +33,48 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  signIn(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const tokenSet = await this.authService.login(loginDto);
+
+    // expressJs
+    // Cookie 에 토큰들 저장
+    // response.setHeader('Authorization', 'Bearer ' + Object.values(tokenSet));
+    response.cookie('access_token', tokenSet.access_token, { httpOnly: true });
+    response.cookie('refresh_token', tokenSet.refresh_token, {
+      httpOnly: true,
+    });
+
+    return tokenSet;
+  }
+
+  // @UseGuards(JwtAccessTokenGuard) // default
+  @UseGuards(JwtRefreshTokenGuard)
+  @Post('logout')
+  async logout(@Req() req: any, @Res() res: Response) {
+    await this.authService.logout(req.user.id);
+
+    // Clear cookie (tokens)
+    res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
+    return res.send('Logout Success');
+  }
+
+  // refresh access token using a refresh token if that refresh token is valid.
+  @UseGuards(JwtRefreshTokenGuard)
+  @Post('refresh')
+  async refreshAccessToken(@Req() req: any, @Res() res: Response) {
+    // The user field is added to the request while passing through JwtRefreshTokenGuard.
+    const authId = req.user.sub;
+    const { accessToken, refreshToken } =
+      await this.authService.refreshAccessToken(
+        authId,
+        req.cookies['refresh_token'],
+      );
+    res.cookie('access_token', accessToken, { httpOnly: true });
+    return { accessToken, refreshToken };
   }
 
   // @UseInterceptors(ClassSerializerInterceptor)
@@ -47,12 +93,10 @@ export class AuthController {
     return await this.authService.createAccount(createAccountDto);
   }
 
-  // @UseGuards(AuthGuard)
-  // @UseGuards(JwtAuthGuard)
   @Patch('password')
   async updateAccount(
     @Body() updateAccountDto: UpdateAccountDto,
-    @Request() req,
+    @Request() req: any,
   ): Promise<UpdateResult> {
     console.log(req.user);
     return await this.authService.updateAccount(updateAccountDto);

@@ -4,8 +4,11 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthGuard } from '@nestjs/passport';
 import { IS_PUBLIC_KEY } from './auth.decorator';
 
+// @Injectable()
+// export class JwtRefreshTokenGuard extends AuthGuard('refresh_token') {}
+
 @Injectable()
-export class JwtRefreshTokenGuard extends AuthGuard('refresh_token') {
+export class JwtRefreshTokenGuard extends AuthGuard('jwt_refresh_token') {
   constructor(
     private jwtService: JwtService,
     private reflector: Reflector,

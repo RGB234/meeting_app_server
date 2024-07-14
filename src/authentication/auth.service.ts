@@ -8,7 +8,6 @@ import { DataSource, DeleteResult, Repository, UpdateResult } from 'typeorm';
 import { Authentication } from './auth.entity';
 import { CreateAccountDto } from './dtos/create-account-dto';
 import { DeleteAccountDto } from './dtos/delete-account-dto';
-import { User } from 'src/user/user.entity';
 import { UpdateAccountDto } from './dtos/update-account-dto';
 import { LoginDto } from './dtos/login-dto';
 import { JwtService } from '@nestjs/jwt';
@@ -64,15 +63,17 @@ export class AuthService {
     //
     const access_token = await this.issueAccessToken(auth);
     const refresh_token = await this.issueRefreshToken(auth);
+
+    await this.storeRefreshToken(auth.id, refresh_token);
     return {
       access_token: access_token,
       refresh_token: refresh_token,
     };
   }
 
-  async logout(auth: Authentication): Promise<void> {
+  async logout(authId: string): Promise<void> {
     // Set refreshToken to null
-    this.refreshTokenStroe(auth.id, null, null);
+    this.storeRefreshToken(authId, null);
   }
 
   async issueAccessToken(auth: Authentication) {
@@ -80,7 +81,10 @@ export class AuthService {
       sub: auth.id,
       authEmail: auth.email,
     };
-    const access_token = await this.jwtService.signAsync(payload);
+    const access_token = await this.jwtService.signAsync(payload, {
+      secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+      expiresIn: this.configService.get<string>('JWT_ACCESS_EXP'),
+    });
     return access_token;
   }
 
@@ -96,13 +100,22 @@ export class AuthService {
   }
 
   // Store a refresh Token to DB
-  async refreshTokenStroe(authId: string, refreshToken: string, exp: Date) {
+  async storeRefreshToken(authId: string, refreshToken: string) {
+    const expConst = parseInt(
+      this.configService.get<string>('JWT_REFRESH_EXP'),
+    );
+    const exp = new Date(Date.now() + expConst);
+    const exp_timestamp = exp.toISOString().slice(0, 19).replace('T', ' ');
+
     const updateAccountDto = new UpdateAccountDto();
     updateAccountDto.id = authId;
     updateAccountDto.refreshToken = refreshToken;
-    updateAccountDto.refreshTokenEXP = exp;
+    // 2024-07-14T12:09:33.615Z
+    updateAccountDto.tokenExp = new Date(exp_timestamp);
 
-    this.updateAccount(updateAccountDto);
+    console.log(updateAccountDto.tokenExp);
+
+    return await this.updateAccount(updateAccountDto);
   }
 
   // return True if it is a valid refresh token
@@ -113,7 +126,10 @@ export class AuthService {
     const auth = await this.getAuthById(authId);
     if (auth) {
       // if refresh token is null (Not allocated)
-      if (!auth.refreshToken) return false;
+      if (auth.refreshToken == null) {
+        console.log('ERROR : refresh token is null');
+        return false;
+      }
 
       // Not Encrypted yet (업데이트 예정)
       const isValid = auth.refreshToken == refreshToken ? true : false;
@@ -123,6 +139,7 @@ export class AuthService {
     }
   }
 
+  // refresh access token using a refresh token if that refresh token is valid.
   async refreshAccessToken(authId: string, refreshToken: string) {
     const isValid = this.validateRefreshToken(authId, refreshToken);
     if (!isValid) throw new UnauthorizedException('Invalid Refresh token');
@@ -166,7 +183,7 @@ export class AuthService {
     deleteAccountDto: DeleteAccountDto,
   ): Promise<DeleteResult> {
     const auth = await this.datasource.manager.findOneBy(Authentication, {
-      id: deleteAccountDto.authenticationId,
+      id: deleteAccountDto.authId,
     });
     if (!auth) {
       throw new BadRequestException(
@@ -180,7 +197,7 @@ export class AuthService {
       const deleteResult = await this.datasource.manager.delete(
         Authentication,
         {
-          id: deleteAccountDto.authenticationId,
+          id: deleteAccountDto.authId,
         },
       );
       return deleteResult;

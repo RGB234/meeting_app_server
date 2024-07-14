@@ -20,8 +20,8 @@ export class Authentication {
   @Column({ type: 'varchar', default: null })
   refreshToken: string;
 
-  @Column({ type: 'date', default: null })
-  refreshTokenEXP: Date;
+  @Column({ type: 'timestamp', default: null })
+  tokenExp: Date;
 
   // Authenticaion (parent) <-Ref- User (child)
   @OneToOne(() => User, (user) => user.authentication, {
