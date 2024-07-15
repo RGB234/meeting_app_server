@@ -66,15 +66,16 @@ export class AuthController {
   @UseGuards(JwtRefreshTokenGuard)
   @Post('refresh')
   async refreshAccessToken(@Req() req: any, @Res() res: Response) {
-    // The user field is added to the request while passing through JwtRefreshTokenGuard.
+    // The 'user' field is added to the request while passing through JwtRefreshTokenGuard.
     const authId = req.user.sub;
-    const { accessToken, refreshToken } =
-      await this.authService.refreshAccessToken(
-        authId,
-        req.cookies['refresh_token'],
-      );
-    res.cookie('access_token', accessToken, { httpOnly: true });
-    return { accessToken, refreshToken };
+    const tokenSet = await this.authService.refreshAccessToken(
+      authId,
+      req.cookies['refresh_token'],
+    );
+
+    res.cookie('access_token', tokenSet.accessToken, { httpOnly: true });
+
+    return res.send('access token reissue completed');
   }
 
   // @UseInterceptors(ClassSerializerInterceptor)
@@ -98,7 +99,6 @@ export class AuthController {
     @Body() updateAccountDto: UpdateAccountDto,
     @Request() req: any,
   ): Promise<UpdateResult> {
-    console.log(req.user);
     return await this.authService.updateAccount(updateAccountDto);
   }
 

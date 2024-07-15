@@ -20,8 +20,4 @@ export class CreateAccountDto {
   @ApiProperty()
   @IsString()
   refreshToken: string = null;
-
-  @ApiProperty()
-  @IsDate()
-  tokenExp: Timestamp = null;
 }

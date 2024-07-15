@@ -20,9 +20,6 @@ export class Authentication {
   @Column({ type: 'varchar', default: null })
   refreshToken: string;
 
-  @Column({ type: 'timestamp', default: null })
-  tokenExp: Date;
-
   // Authenticaion (parent) <-Ref- User (child)
   @OneToOne(() => User, (user) => user.authentication, {
     // Setting cascade: true will enable full cascades.

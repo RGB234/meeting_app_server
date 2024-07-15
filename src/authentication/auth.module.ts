@@ -38,8 +38,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     AuthService,
     JwtAccessTokenStrategy,
     JwtRefreshTokenStrategy,
-    JwtAccessTokenGuard,
-    JwtRefreshTokenGuard,
+    // JwtRefreshTokenGuard,
+    // JwtAccessTokenGuard,
+
     // register the Guard as a global guard
     // using the following construction in any module
     {

@@ -83,7 +83,7 @@ export class AuthService {
     };
     const access_token = await this.jwtService.signAsync(payload, {
       secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-      expiresIn: this.configService.get<string>('JWT_ACCESS_EXP'),
+      expiresIn: parseInt(this.configService.get<string>('JWT_ACCESS_EXP')),
     });
     return access_token;
   }
@@ -94,26 +94,16 @@ export class AuthService {
     };
     const refresh_token = await this.jwtService.signAsync(payload, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      expiresIn: this.configService.get<string>('JWT_REFRESH_EXP'),
+      expiresIn: parseInt(this.configService.get<string>('JWT_REFRESH_EXP')),
     });
     return refresh_token;
   }
 
   // Store a refresh Token to DB
   async storeRefreshToken(authId: string, refreshToken: string) {
-    const expConst = parseInt(
-      this.configService.get<string>('JWT_REFRESH_EXP'),
-    );
-    const exp = new Date(Date.now() + expConst);
-    const exp_timestamp = exp.toISOString().slice(0, 19).replace('T', ' ');
-
     const updateAccountDto = new UpdateAccountDto();
     updateAccountDto.id = authId;
     updateAccountDto.refreshToken = refreshToken;
-    // 2024-07-14T12:09:33.615Z
-    updateAccountDto.tokenExp = new Date(exp_timestamp);
-
-    console.log(updateAccountDto.tokenExp);
 
     return await this.updateAccount(updateAccountDto);
   }
@@ -124,19 +114,19 @@ export class AuthService {
     refreshToken: string,
   ): Promise<boolean> {
     const auth = await this.getAuthById(authId);
-    if (auth) {
-      // if refresh token is null (Not allocated)
-      if (auth.refreshToken == null) {
-        console.log('ERROR : refresh token is null');
-        return false;
-      }
-
-      // Not Encrypted yet (업데이트 예정)
-      const isValid = auth.refreshToken == refreshToken ? true : false;
-      return isValid;
-    } else {
+    if (!auth) {
       throw new BadRequestException('Invalid authId');
     }
+
+    // console.log('refresh token: ', refreshToken);
+    // if refresh token is null (Not allocated)
+    if (auth.refreshToken == null) {
+      console.log('ERROR : refresh token is null');
+      return false;
+    }
+
+    // Not Encrypted yet (업데이트 예정)
+    return auth.refreshToken === refreshToken;
   }
 
   // refresh access token using a refresh token if that refresh token is valid.

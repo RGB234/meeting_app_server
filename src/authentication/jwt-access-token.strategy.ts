@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
@@ -15,8 +15,12 @@ export class JwtAccessTokenStrategy extends PassportStrategy(
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         (request) => {
-          console.log('Access token > ', request?.cookies?.access_token);
-          return request?.cookies?.access_token;
+          const accessToken = request?.cookies?.access_token;
+          if (!accessToken)
+            throw new UnauthorizedException('ACCESS TOKEN is undefined');
+          // console.log('Access token > ', accessToken);
+          // console.log(configService.get<string>('JWT_ACCESS_SECRET'));
+          return accessToken;
         },
       ]),
       ignoreExpiration: false,
@@ -26,15 +30,21 @@ export class JwtAccessTokenStrategy extends PassportStrategy(
     });
   }
 
-  async validate(req: Request, payload: AccessTokenPayload) {
-    console.log('???');
-    // request 에 payload 저장.
-    // attach it as a property on the Request object.
-    req.user = payload;
-    console.log('return val: ', {
-      authId: payload.sub,
-      authEmail: payload.email,
-    });
-    return { authId: payload.sub, authEmail: payload.email };
+  // The validate method of your JwtStrategy will only be called when the token has been verified in terms of the encryption
+  // (corrrect key was used to sign it, in your case secretKey) and it is not expired.
+  validate(req: Request, payload: AccessTokenPayload) {
+    // Passport will build a user object based on the return value of our validate() method,
+    // and attach it as a property on the Request object.
+    // req.user = payload;
+    // return { sub: payload.sub, authEmail: payload.email };
+    return payload;
+  }
+
+  handleRequest(err, user, info) {
+    // You can throw an exception based on either "info" or "err" arguments
+    if (err || !user) {
+      throw err || new UnauthorizedException();
+    }
+    return user;
   }
 }
