@@ -1,4 +1,4 @@
-import { IsDate, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsNumber, IsString, IsUUID } from 'class-validator';
 
 export class CreateRoomDto {
   // PK
@@ -6,11 +6,11 @@ export class CreateRoomDto {
   // @IsNumber()
   // id: number;
 
-  @IsNumber()
-  managerID: number;
+  @IsUUID()
+  managerID: string;
 
-  @IsDate()
-  createdAt: Date;
+  // @IsDate()
+  // createdAt: Date;
 
   @IsString()
   title: String;

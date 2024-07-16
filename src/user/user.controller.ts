@@ -1,6 +1,8 @@
 import {
   Body,
   Controller,
+  Get,
+  Param,
   Post,
   Put,
   UsePipes,
@@ -14,6 +16,11 @@ import { UpdateUserDto } from './update-user-dto';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+  @Get()
+  async getUser(@Body() body: any) {
+    return await this.userService.getUserByAuthId(body.authId);
+  }
 
   @Post('create')
   @UsePipes(

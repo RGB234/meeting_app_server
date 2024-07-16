@@ -63,6 +63,7 @@ export class AuthController {
   }
 
   // refresh access token using a refresh token if that refresh token is valid.
+  @Public() // Deactivate JwtAccessTokenGuard which is a Global Guard
   @UseGuards(JwtRefreshTokenGuard)
   @Post('refresh')
   async refreshAccessToken(@Req() req: any, @Res() res: Response) {

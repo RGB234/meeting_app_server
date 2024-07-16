@@ -1,14 +1,26 @@
-import { Column, Entity, ManyToOne, PrimaryColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  PrimaryColumn,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Room } from './room.entity';
 import { User } from 'src/user/user.entity';
 
 @Entity()
 export class UserToRoom {
-  // @PrimaryColumn()
-  // public uid: number;
+  @PrimaryGeneratedColumn()
+  public userToRoomId: number;
 
-  // @PrimaryColumn()
-  // public roomID: number;
+  @Column()
+  public userId: string;
+
+  @Column()
+  public roomId: number;
+
+  @Column()
+  public joinedAt: Date;
 
   @PrimaryColumn({ type: 'int' })
   @ManyToOne(() => User, (user) => user.userToRooms)
@@ -22,7 +34,4 @@ export class UserToRoom {
   @ManyToOne(() => Room, (room) => room.userToRooms)
   // @JoinColumn({ name: 'roomID', referencedColumnName: 'id' })
   public room: Room;
-
-  @Column()
-  public joinedAt: Date;
 }

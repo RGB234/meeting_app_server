@@ -19,13 +19,13 @@ export class JwtRefreshTokenGuard extends AuthGuard('jwt_refresh_token') {
   canActivate(context: ExecutionContext) {
     // https://docs.nestjs.com/fundamentals/execution-context#reflection-and-metadata
     // get a Handler's Metadata. A value corresponding to IS_PUBLIC_KEY.
-    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    if (isPublic) {
-      return true;
-    }
+    // const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+    //   context.getHandler(),
+    //   context.getClass(),
+    // ]);
+    // if (isPublic) {
+    //   return true;
+    // }
     return super.canActivate(context);
   }
 }

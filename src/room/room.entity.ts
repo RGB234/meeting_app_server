@@ -14,10 +14,10 @@ export class Room {
   public userToRooms: UserToRoom[];
 
   @OneToMany(() => Message, (message) => message.room)
-  messages: Message[];
+  public messages: Message[];
 
   @Column()
-  managerID: number;
+  managerID: string; // UUID
 
   @Column()
   createdAt: Date;
