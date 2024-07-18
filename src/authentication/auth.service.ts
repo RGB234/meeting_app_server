@@ -102,7 +102,7 @@ export class AuthService {
   // Store a refresh Token to DB
   async storeRefreshToken(authId: string, refreshToken: string) {
     const updateAccountDto = new UpdateAccountDto();
-    updateAccountDto.id = authId;
+    updateAccountDto.authId = authId;
     updateAccountDto.refreshToken = refreshToken;
 
     return await this.updateAccount(updateAccountDto);
@@ -121,7 +121,7 @@ export class AuthService {
     // console.log('refresh token: ', refreshToken);
     // if refresh token is null (Not allocated)
     if (auth.refreshToken == null) {
-      console.log('ERROR : refresh token is null');
+      // console.log('ERROR : refresh token is null');
       return false;
     }
 
@@ -158,12 +158,10 @@ export class AuthService {
   async updateAccount(
     updateAccountDto: UpdateAccountDto,
   ): Promise<UpdateResult> {
-    const auth = await this.getAuthById(updateAccountDto.id);
+    const auth = await this.getAuthById(updateAccountDto.authId);
     if (auth) {
-      return await this.authRepository.update(
-        { id: updateAccountDto.id },
-        updateAccountDto,
-      );
+      const { authId, ...updateData } = updateAccountDto;
+      return await this.authRepository.update({ id: authId }, updateData);
     } else {
       throw new BadRequestException('Invalid Email (NOT FOUND)');
     }

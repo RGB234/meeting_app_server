@@ -1,7 +1,5 @@
 import { ApiProperty, ApiSecurity } from '@nestjs/swagger';
-import { IS_STRING, IsDate, IsEmail, IsString, IsUUID } from 'class-validator';
-import { Timestamp } from 'typeorm';
-// import { UUID } from 'crypto';
+import { IsEmail, IsString } from 'class-validator';
 
 export class CreateAccountDto {
   // PK
@@ -10,14 +8,13 @@ export class CreateAccountDto {
 
   @ApiProperty()
   @IsEmail()
-  // @IsString()
   email: string;
 
   @ApiProperty()
   @IsString()
   password: string;
 
-  @ApiProperty()
-  @IsString()
-  refreshToken: string = null;
+  // @ApiProperty()
+  // @IsString()
+  // refreshToken: string = null;
 }

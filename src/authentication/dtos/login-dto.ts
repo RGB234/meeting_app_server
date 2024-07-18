@@ -1,5 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, IntersectionType, PartialType } from '@nestjs/swagger';
 import { IsEmail, IsString } from 'class-validator';
+import { CreateAccountDto } from './create-account-dto';
 
 export class LoginDto {
   @ApiProperty()

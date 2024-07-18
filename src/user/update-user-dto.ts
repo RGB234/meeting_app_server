@@ -11,6 +11,6 @@ import {
 
 // authenticationId is Required, the others are optional
 export class UpdateUserDto extends IntersectionType(
-  PartialType(OmitType(CreateUserDto, ['authenticationId'] as const)),
-  PickType(CreateUserDto, ['authenticationId'] as const),
+  PartialType(OmitType(CreateUserDto, ['authId'] as const)),
+  PickType(CreateUserDto, ['authId'] as const),
 ) {}

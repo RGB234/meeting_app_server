@@ -8,7 +8,6 @@ import { JwtAccessTokenStrategy } from './jwt-access-token.strategy';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAccessTokenGuard } from './jwt-access-token.guard';
 import { JwtRefreshTokenStrategy } from './jwt-refresh-token.strategy';
-import { JwtRefreshTokenGuard } from './jwt-refresh-token.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({

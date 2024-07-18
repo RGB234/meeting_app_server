@@ -35,6 +35,12 @@ export class JwtAccessTokenStrategy extends PassportStrategy(
   validate(req: Request, payload: AccessTokenPayload) {
     // Passport will build a user object based on the return value of our validate() method,
     // and attach it as a property on the Request object.
+
+    // Make sure to match the request.body.id with the authentication ID in the payload (sub)
+    // req.body.authId is not null When the request goes through AuthService.
+    if (req.body?.authId && payload.sub != req.body.authId) {
+      throw new UnauthorizedException('ACCESS DENIDED');
+    }
     // req.user = payload;
     // return { sub: payload.sub, authEmail: payload.email };
     return payload;

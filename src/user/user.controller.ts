@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   UsePipes,
@@ -12,6 +13,8 @@ import { UserService } from './user.service';
 import { CreateUserDto } from './create-user-dto';
 import { User } from './user.entity';
 import { UpdateUserDto } from './update-user-dto';
+import { Public } from 'src/authentication/auth.decorator';
+import { UpdateResult } from 'typeorm';
 
 @Controller('user')
 export class UserController {
@@ -22,6 +25,7 @@ export class UserController {
     return await this.userService.getUserByAuthId(body.authId);
   }
 
+  @Public()
   @Post('create')
   @UsePipes(
     new ValidationPipe({
@@ -40,7 +44,7 @@ export class UserController {
     }
   }
 
-  @Put('update')
+  @Patch('update')
   @UsePipes(
     new ValidationPipe({
       transform: true,
@@ -48,7 +52,9 @@ export class UserController {
       whitelist: true,
     }),
   )
-  async updateUser(@Body() updateUserDto: UpdateUserDto): Promise<void> {
+  async updateUser(
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<UpdateResult> {
     return await this.userService.updateUser(updateUserDto);
   }
 }

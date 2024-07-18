@@ -10,6 +10,7 @@ import {
   Req,
   Request,
   Res,
+  UnauthorizedException,
   UseGuards,
   UsePipes,
   ValidationPipe,
@@ -33,15 +34,22 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('login')
+  @UsePipes(
+    new ValidationPipe({
+      // transform: true,
+      // If set 'whitelist' to true, validator will strip validated (returned) object of any properties that do not use any validation decorators.
+      whitelist: true,
+    }),
+  )
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) response: Response,
   ) {
     const tokenSet = await this.authService.login(loginDto);
 
-    // expressJs
+    // Header
+    response.setHeader('Authorization', 'Bearer ' + Object.values(tokenSet));
     // Cookie 에 토큰들 저장
-    // response.setHeader('Authorization', 'Bearer ' + Object.values(tokenSet));
     response.cookie('access_token', tokenSet.access_token, { httpOnly: true });
     response.cookie('refresh_token', tokenSet.refresh_token, {
       httpOnly: true,
@@ -76,10 +84,12 @@ export class AuthController {
 
     res.cookie('access_token', tokenSet.accessToken, { httpOnly: true });
 
-    return res.send('access token reissue completed');
+    // return res.send('access token reissue completed');
+    return res.send(tokenSet);
   }
 
   // @UseInterceptors(ClassSerializerInterceptor)
+  @Public()
   @Post('create')
   @UsePipes(
     new ValidationPipe({
@@ -95,7 +105,14 @@ export class AuthController {
     return await this.authService.createAccount(createAccountDto);
   }
 
-  @Patch('password')
+  @Patch('update')
+  @UsePipes(
+    new ValidationPipe({
+      // transform: true,
+      // If set 'whitelist' to true, validator will strip validated (returned) object of any properties that do not use any validation decorators.
+      whitelist: true,
+    }),
+  )
   async updateAccount(
     @Body() updateAccountDto: UpdateAccountDto,
     @Request() req: any,
@@ -110,10 +127,19 @@ export class AuthController {
     }),
   )
   async deleteAccount(
+    @Res() res: Response,
     @Body() deleteAccountDto: DeleteAccountDto,
   ): Promise<DeleteResult> {
     try {
-      return await this.authService.deleteAccount(deleteAccountDto);
+      const deleteResult =
+        await this.authService.deleteAccount(deleteAccountDto);
+      // account deletion success
+      if (deleteResult) {
+        // // clear current cookies (access token & refresh token)
+        res.clearCookie('access_token');
+        res.clearCookie('refresh_token');
+      }
+      return deleteResult;
     } catch (err) {
       if (err instanceof BadRequestException) {
         console.log(err.message);

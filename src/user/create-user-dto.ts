@@ -10,7 +10,7 @@ export class CreateUserDto {
   // you should use PartialType from the @nestjs/mapped-types package instead
   @ApiProperty()
   @IsUUID()
-  authenticationId: UUID;
+  authId: UUID;
 
   @ApiProperty()
   @IsString()
