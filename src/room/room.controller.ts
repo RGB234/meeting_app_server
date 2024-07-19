@@ -21,8 +21,16 @@ export class RoomController {
       whitelist: true,
     }),
   )
-  async postRoom(@Body() createRoomDto: CreateRoomDto): Promise<Room> {
-    console.log(createRoomDto);
-    return await this.roomService.createRoom(createRoomDto);
+  async postRoom(@Body() createRoomDto: CreateRoomDto): Promise<void> {
+    const currentTime = new Date();
+    const roomId = await this.roomService.createRoom(
+      createRoomDto,
+      currentTime,
+    );
+    await this.roomService.joinRoom({
+      userId: createRoomDto.managerId,
+      roomId: roomId,
+      joinedAt: currentTime,
+    });
   }
 }

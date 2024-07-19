@@ -6,8 +6,8 @@ export class CreateRoomDto {
   // @IsNumber()
   // id: number;
 
-  @IsUUID()
-  managerID: string;
+  @IsNumber()
+  managerId: number;
 
   // @IsDate()
   // createdAt: Date;

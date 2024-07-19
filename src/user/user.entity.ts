@@ -18,14 +18,18 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
+  // FK. REFERENCES authentication(id) with DELETE CASCADE option
   // PrimaryColumn decoration on OneToOne directly does not work
   @OneToOne(() => Authentication, (auth) => auth.user, {
     // set cascade remove only from one side of relationship.
     onDelete: 'CASCADE',
   })
   // @JoinColumn must only be on one side of the relation - on the table that will own the foreign key.
-  // Note, inverse relation does not have a @JoinColumn.
-  @JoinColumn({ name: 'authenticationId', referencedColumnName: 'id' })
+  // Note, the inverse relation does not have a @JoinColumn in case of a one sided relation.
+  @JoinColumn({ name: 'authId', referencedColumnName: 'id' })
+  // When we set @JoinColumn, it automatically creates a column in the database named propertyName + referencedColumnName
+  // By default your relation always refers to the primary column of the related entity.
+  // If you want to create relation with other columns of the related entity - you can specify them in @JoinColumn as well:
   authentication: Authentication;
 
   // To CACADE delete when a user's account is deleted

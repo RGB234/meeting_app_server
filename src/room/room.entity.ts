@@ -16,8 +16,9 @@ export class Room {
   @OneToMany(() => Message, (message) => message.room)
   public messages: Message[];
 
+  // NOT FK. No need to use FK because User(id) never changes
   @Column()
-  managerID: string; // UUID
+  managerId: number; //
 
   @Column()
   createdAt: Date;
@@ -31,3 +32,12 @@ export class Room {
   @Column()
   maxFemaleCount: number;
 }
+
+// CREATE TABLE room (
+//   id INT AUTO_INCREMENT PRIMARY KEY,
+//   managerID CHAR(36) NOT NULL,
+//   createdAt TIMESTAMP NOT NULL,
+//   title VARCHAR(255) NOT NULL,
+//   maxMaleCount INT NOT NULL,
+//   maxFemaleCount INT NOT NULL
+// );

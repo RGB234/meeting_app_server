@@ -20,6 +20,15 @@ export class UserService {
     private authService: AuthService,
   ) {}
 
+  async getUserById(userId: number) {
+    return await this.userRepository.findOneBy({ id: userId });
+  }
+
+  async getAuthByUserId(userId: number): Promise<Authentication | null> {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    return user.authentication;
+  }
+
   async getUserByAuthId(authId: string): Promise<User | null> {
     // const auth = await this.authRepository.findOneBy({
     //   id: authId,

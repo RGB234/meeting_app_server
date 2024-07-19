@@ -11,23 +11,26 @@ import {
 
 @Entity()
 export class Message {
-  // @PrimaryGeneratedColumn()
-  // id: number;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  // @Column()
-  // roomID: number;
+  // FK. REFERENCES User(id). 'NO CASCADE option'
+  @Column()
+  writerId: number;
 
-  @PrimaryColumn({ type: 'varchar' })
-  @ManyToOne(() => Room, (room) => room.messages)
-  room: Room;
+  // FK. REFERENCES Room(id) with DELETE CASCADE option
+  @Column()
+  roomId: number;
 
-  // @Column()
-  // writerID: number;
-
-  @PrimaryColumn({ type: 'varchar' })
   @ManyToOne(() => User, (user) => user.messages)
-  @JoinColumn({ name: 'writer', referencedColumnName: 'authentication' })
+  // ??
+  // @JoinColumn({ name: 'writerId', referencedColumnName: 'id' })
   user: User;
+
+  @ManyToOne(() => Room, (room) => room.messages)
+  // ??
+  // @JoinColumn({ name: 'roomId', referencedColumnName: 'id' })
+  room: Room;
 
   @Column()
   createdAt: Date;
@@ -38,3 +41,14 @@ export class Message {
   @Column()
   text: String;
 }
+
+// CREATE TABLE message (
+// 	id INT AUTO_INCREMENT PRIMARY KEY,
+//     writerId INT NOT NULL UNIQUE,
+//     roomId INT NOT NULL UNIQUE,
+//     createdAt TIMESTAMP NOT NULL,
+//     deleted BIT NOT NULL,
+//     text VARCHAR(255) NOT NULL,
+//     CONSTRAINT fk_writer FOREIGN KEY (writerId) REFERENCES user(id),
+//     CONSTRAINT fk_parentRoom FOREIGN KEY (roomId) REFERENCES room(id)
+// );

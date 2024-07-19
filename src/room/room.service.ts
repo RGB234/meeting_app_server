@@ -5,6 +5,7 @@ import { Room } from './room.entity';
 import { CreateRoomDto } from './create-room-dto';
 import { UserToRoom } from './userToRoom.entity';
 import { UserService } from 'src/user/user.service';
+import { Message } from 'src/chat/message.entity';
 
 @Injectable()
 export class RoomService {
@@ -20,29 +21,46 @@ export class RoomService {
     private userService: UserService,
   ) {}
 
-  async createRoom(createRoomDto: CreateRoomDto): Promise<Room> {
-    const manager = await this.userService.getUserByAuthId(
-      createRoomDto.managerID,
-    );
-    const currentTime = new Date();
+  async getRoomById(roomId: number): Promise<Room | null> {
+    return this.roomRepository.findOneBy({ id: roomId });
+  }
 
+  async joinRoom({
+    // create Join Table Record
+    userId,
+    roomId,
+    joinedAt,
+  }: {
+    userId: number;
+    roomId: number;
+    joinedAt: Date;
+  }): Promise<UserToRoom> {
+    const userToRoom = new UserToRoom();
+    userToRoom.userId = userId;
+    userToRoom.roomId = roomId;
+    userToRoom.joinedAt = joinedAt;
+    userToRoom.user = await this.userService.getUserById(userId);
+    userToRoom.room = await this.getRoomById(roomId);
+
+    const room = await this.getRoomById(roomId);
+    room.userToRooms = [userToRoom];
+
+    return await this.datasource.manager.save(userToRoom);
+  }
+
+  async createRoom(
+    createRoomDto: CreateRoomDto,
+    createdAt: Date,
+  ): Promise<number> {
+    // const manager = await this.userService.getUserById(createRoomDto.managerID);
     const newRoom = this.roomRepository.create({
       ...createRoomDto,
-      createdAt: currentTime,
+      createdAt: createdAt,
       userToRooms: [],
       messages: [],
     });
 
-    const userToRoom = new UserToRoom();
-    (userToRoom.userId = createRoomDto.managerID),
-      (userToRoom.roomId = newRoom.id),
-      (userToRoom.joinedAt = currentTime),
-      (userToRoom.user = manager);
-    userToRoom.room = newRoom;
-
-    // newRoom.userToRooms 에 위에서 정의한 mapping 추가
-    newRoom.userToRooms.push(userToRoom);
-
-    return await this.datasource.manager.save(newRoom);
+    await this.datasource.manager.save(newRoom);
+    return newRoom.id;
   }
 }

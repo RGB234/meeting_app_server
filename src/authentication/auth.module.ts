@@ -13,16 +13,16 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Authentication]),
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_ACCESS_SECRET'),
-        signOptions: {
-          expiresIn: configService.get<string>('JWT_ACCESS_EXP'),
-        },
-      }),
-    }),
+    // JwtModule.registerAsync({
+    //   imports: [ConfigModule],
+    //   inject: [ConfigService],
+    //   useFactory: (configService: ConfigService) => ({
+    //     secret: configService.get<string>('JWT_ACCESS_SECRET'),
+    //     signOptions: {
+    //       expiresIn: configService.get<string>('JWT_ACCESS_EXP'),
+    //     },
+    //   }),
+    // }),
     // JwtModule.register({
     //   // registering the JwtModule as global to make things easier for us.
     //   // This means that we don't need to import the JwtModule anywhere else in our application.
