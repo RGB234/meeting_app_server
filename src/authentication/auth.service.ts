@@ -12,6 +12,7 @@ import { UpdateAccountDto } from './dtos/update-account-dto';
 import { LoginDto } from './dtos/login-dto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { Request } from 'express';
 
 @Injectable()
 export class AuthService {

@@ -107,12 +107,11 @@ export class RoomService {
   // Eject all users who participated in the room
   async ejectAllUsersIn(roomId: number): Promise<DeleteResult> {
     const userToRooms = await this.userToRoomRepo.findBy({ roomId });
-    if (userToRooms.length == 0)
-      throw new BadRequestException('Invalid roomId');
-
-    const ids = userToRooms.map((e) => {
-      e.id;
-    });
+    if (userToRooms.length == 0) {
+      return;
+      // throw new BadRequestException('the room is already empty');
+    }
+    const ids = userToRooms.map((e) => e.id);
 
     return await this.userToRoomRepo.delete({ id: In(ids) });
   }
@@ -123,11 +122,13 @@ export class RoomService {
     if (!room) {
       throw new BadRequestException('Invalid roomId');
     }
-    const isNotEmpty = await this.userToRoomRepo.existsBy({ id: roomId });
-    if (isNotEmpty)
+    const isNotEmpty = await this.userToRoomRepo.existsBy({ roomId: roomId });
+    if (isNotEmpty) {
       throw new BadRequestException(
         'It can be deleted only when there is no user in the room.',
       );
+    }
+
     return this.roomRepo.delete(room);
   }
 
@@ -144,7 +145,7 @@ export class RoomService {
 
   // For development or test convenience
   // Delete a room. If it's not empty room, forcibly eject all Users in the room.
-  async hardDeleteRoom(roomId: number): Promise<DeleteResult> {
+  async forceDeleteRoom(roomId: number): Promise<DeleteResult> {
     const room = await this.roomRepo.findOneBy({ id: roomId });
     if (!room) {
       throw new BadRequestException('Invalid roomId');

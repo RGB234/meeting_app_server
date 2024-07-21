@@ -8,9 +8,7 @@ import {
   Patch,
   Post,
   Req,
-  Request,
   Res,
-  UnauthorizedException,
   UseGuards,
   UsePipes,
   ValidationPipe,
@@ -25,7 +23,6 @@ import { Public } from './auth.decorator';
 import { LoginDto } from './dtos/login-dto';
 import { Response } from 'express';
 import { JwtRefreshTokenGuard } from './jwt-refresh-token.guard';
-import { JwtAccessTokenGuard } from './jwt-access-token.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -75,7 +72,8 @@ export class AuthController {
   @UseGuards(JwtRefreshTokenGuard)
   @Post('refresh')
   async refreshAccessToken(@Req() req: any, @Res() res: Response) {
-    // The 'user' field is added to the request while passing through JwtRefreshTokenGuard.
+    // The 'user' field is added to the request while passing through JwtRefreshTokenStrategy.
+    // JwtRefreshTokenGuard calls JwtRefreshTokenStrategy's validate method
     const authId = req.user.sub;
     const tokenSet = await this.authService.refreshAccessToken(
       authId,
@@ -115,9 +113,15 @@ export class AuthController {
   )
   async updateAccount(
     @Body() updateAccountDto: UpdateAccountDto,
-    @Request() req: any,
+    @Req() req: any,
   ): Promise<UpdateResult> {
-    return await this.authService.updateAccount(updateAccountDto);
+    // refresh token will be set null. Maybe I think, because the default value of refresh_token column is null
+    await this.authService.updateAccount(updateAccountDto);
+    // restore current refresh_token value.
+    return await this.authService.storeRefreshToken(
+      updateAccountDto.authId,
+      req.cookies['refresh_token'],
+    );
   }
 
   @Delete('delete')

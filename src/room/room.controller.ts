@@ -2,17 +2,24 @@ import {
   Body,
   Controller,
   Delete,
+  Param,
   Post,
+  Req,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import { RoomService } from './room.service';
 import { CreateRoomDto } from './create-room-dto';
 import { UserToRoomDto } from './join-room-dto';
+import { UserService } from 'src/user/user.service';
+import { Request } from 'express';
 
 @Controller('room')
 export class RoomController {
-  constructor(private readonly roomService: RoomService) {}
+  constructor(
+    private readonly roomService: RoomService,
+    private readonly userService: UserService,
+  ) {}
 
   @Post('create')
   @UsePipes(
@@ -28,30 +35,40 @@ export class RoomController {
       createRoomDto,
       currentTime,
     );
+  }
+
+  @Delete('delete/:id')
+  async deleteRoom(@Param('id') roomId: number) {
+    await this.roomService.deleteRoom(roomId);
+  }
+
+  @Delete('force-delete/:id')
+  async forceDeleteRoom(@Param('id') roomId: number) {
+    await this.roomService.forceDeleteRoom(roomId);
+  }
+
+  @Post('end/:id')
+  async endRoom(@Param('id') roomId: number) {
+    await this.roomService.endRoom(roomId);
+  }
+
+  @Post('join/:id')
+  async joinRoom(@Param('id') roomId: number, @Req() req: any) {
+    const currentTime = new Date();
+    const user = await this.userService.getUserByAuthId(req.user.sub);
     await this.roomService.joinRoom({
-      userId: createRoomDto.managerId,
+      userId: user.id,
       roomId: roomId,
       joinedAt: currentTime,
     });
   }
 
-  @Post('join')
-  @UsePipes()
-  async joinRoom(@Body() userToRoomDto: UserToRoomDto) {
-    const currentTime = new Date();
-    await this.roomService.joinRoom({
-      userId: userToRoomDto.userId,
-      roomId: userToRoomDto.roomId,
-      joinedAt: currentTime,
-    });
-  }
-
-  @Post('exit')
-  @UsePipes()
-  async exitRoom(@Body() userToRoomDto: UserToRoomDto) {
+  @Post('exit/:id')
+  async exitRoom(@Param('id') roomId: number, @Req() req: any) {
+    const user = await this.userService.getUserByAuthId(req.user.sub);
     this.roomService.exitRoom({
-      userId: userToRoomDto.userId,
-      roomId: userToRoomDto.roomId,
+      userId: user.id,
+      roomId: roomId,
     });
   }
 }

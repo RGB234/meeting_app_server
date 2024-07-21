@@ -6,14 +6,14 @@ export class CreateRoomDto {
   // @IsNumber()
   // id: number;
 
-  @IsNumber()
-  managerId: number;
+  // @IsNumber()
+  // managerId: number;
 
   // @IsDate()
   // createdAt: Date;
 
-  @IsString()
-  title: String;
+  // @IsString()
+  // title: String;
 
   @IsNumber()
   maxMaleCount: number;
