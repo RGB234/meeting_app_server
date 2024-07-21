@@ -1,13 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
   Post,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import { RoomService } from './room.service';
 import { CreateRoomDto } from './create-room-dto';
-import { Room } from './room.entity';
+import { UserToRoomDto } from './join-room-dto';
 
 @Controller('room')
 export class RoomController {
@@ -21,7 +22,7 @@ export class RoomController {
       whitelist: true,
     }),
   )
-  async postRoom(@Body() createRoomDto: CreateRoomDto): Promise<void> {
+  async createRoom(@Body() createRoomDto: CreateRoomDto): Promise<void> {
     const currentTime = new Date();
     const roomId = await this.roomService.createRoom(
       createRoomDto,
@@ -31,6 +32,26 @@ export class RoomController {
       userId: createRoomDto.managerId,
       roomId: roomId,
       joinedAt: currentTime,
+    });
+  }
+
+  @Post('join')
+  @UsePipes()
+  async joinRoom(@Body() userToRoomDto: UserToRoomDto) {
+    const currentTime = new Date();
+    await this.roomService.joinRoom({
+      userId: userToRoomDto.userId,
+      roomId: userToRoomDto.roomId,
+      joinedAt: currentTime,
+    });
+  }
+
+  @Post('exit')
+  @UsePipes()
+  async exitRoom(@Body() userToRoomDto: UserToRoomDto) {
+    this.roomService.exitRoom({
+      userId: userToRoomDto.userId,
+      roomId: userToRoomDto.roomId,
     });
   }
 }

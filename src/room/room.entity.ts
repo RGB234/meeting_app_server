@@ -16,15 +16,15 @@ export class Room {
   @OneToMany(() => Message, (message) => message.room)
   public messages: Message[];
 
-  // NOT FK. No need to use FK because User(id) never changes
-  @Column()
-  managerId: number; //
+  // // NOT FK. No need to use FK because User(id) never changes
+  // @Column()
+  // managerId: number;
 
   @Column()
   createdAt: Date;
 
-  @Column()
-  title: String;
+  // @Column()
+  // title: String;
 
   @Column()
   maxMaleCount: number;

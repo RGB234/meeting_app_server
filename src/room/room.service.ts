@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, DeleteResult, In, Repository } from 'typeorm';
 import { Room } from './room.entity';
 import { CreateRoomDto } from './create-room-dto';
 import { UserToRoom } from './userToRoom.entity';
 import { UserService } from 'src/user/user.service';
-import { Message } from 'src/chat/message.entity';
+import { User } from 'src/user/user.entity';
 
 @Injectable()
 export class RoomService {
@@ -13,20 +13,38 @@ export class RoomService {
     private datasource: DataSource,
 
     @InjectRepository(Room)
-    private roomRepository: Repository<Room>,
+    private roomRepo: Repository<Room>,
 
-    // @InjectRepository(User)
-    // private userRepository : Repository<User>,
+    @InjectRepository(User)
+    private userRepo: Repository<User>,
+
+    @InjectRepository(UserToRoom)
+    private userToRoomRepo: Repository<UserToRoom>,
 
     private userService: UserService,
   ) {}
 
+  // ** fetch data **
+
   async getRoomById(roomId: number): Promise<Room | null> {
-    return this.roomRepository.findOneBy({ id: roomId });
+    return await this.roomRepo.findOneBy({ id: roomId });
   }
 
+  async getAllJoinedRooms(userId: number) {
+    const [userToRooms, count] = await this.userToRoomRepo.findAndCountBy({
+      userId,
+    });
+    const joinedRooms = userToRooms.map((e) => e.roomId); // number[]
+
+    if (joinedRooms.length == 0) return [];
+
+    return this.roomRepo.findBy({ id: In(joinedRooms) });
+  }
+
+  // *******************
+
+  // create Join Table Record
   async joinRoom({
-    // create Join Table Record
     userId,
     roomId,
     joinedAt,
@@ -35,6 +53,12 @@ export class RoomService {
     roomId: number;
     joinedAt: Date;
   }): Promise<UserToRoom> {
+    const isValidRoomId = await this.roomRepo.existsBy({ id: roomId });
+    const isValidUserId = await this.userRepo.existsBy({ id: userId });
+
+    if (!isValidRoomId) throw new BadRequestException('Invalid roomId.');
+    if (!isValidUserId) throw new BadRequestException('Invalid userId');
+
     const userToRoom = new UserToRoom();
     userToRoom.userId = userId;
     userToRoom.roomId = roomId;
@@ -45,15 +69,31 @@ export class RoomService {
     const room = await this.getRoomById(roomId);
     room.userToRooms = [userToRoom];
 
-    return await this.datasource.manager.save(userToRoom);
+    return await this.userToRoomRepo.save(userToRoom);
+  }
+
+  async exitRoom({
+    userId,
+    roomId,
+  }: {
+    userId: number;
+    roomId: number;
+  }): Promise<DeleteResult> {
+    const userToRoom = await this.userToRoomRepo.findOneBy({
+      userId,
+      roomId,
+    });
+    if (!userToRoom) {
+      throw new BadRequestException('Invalid userId or roomId.');
+    }
+    return this.userToRoomRepo.delete(userToRoom);
   }
 
   async createRoom(
     createRoomDto: CreateRoomDto,
     createdAt: Date,
   ): Promise<number> {
-    // const manager = await this.userService.getUserById(createRoomDto.managerID);
-    const newRoom = this.roomRepository.create({
+    const newRoom = this.roomRepo.create({
       ...createRoomDto,
       createdAt: createdAt,
       userToRooms: [],
@@ -62,5 +102,57 @@ export class RoomService {
 
     await this.datasource.manager.save(newRoom);
     return newRoom.id;
+  }
+
+  // Eject all users who participated in the room
+  async ejectAllUsersIn(roomId: number): Promise<DeleteResult> {
+    const userToRooms = await this.userToRoomRepo.findBy({ roomId });
+    if (userToRooms.length == 0)
+      throw new BadRequestException('Invalid roomId');
+
+    const ids = userToRooms.map((e) => {
+      e.id;
+    });
+
+    return await this.userToRoomRepo.delete({ id: In(ids) });
+  }
+
+  // delete a room only if it's empty
+  async deleteRoom(roomId: number): Promise<DeleteResult> {
+    const room = await this.roomRepo.findOneBy({ id: roomId });
+    if (!room) {
+      throw new BadRequestException('Invalid roomId');
+    }
+    const isNotEmpty = await this.userToRoomRepo.existsBy({ id: roomId });
+    if (isNotEmpty)
+      throw new BadRequestException(
+        'It can be deleted only when there is no user in the room.',
+      );
+    return this.roomRepo.delete(room);
+  }
+
+  // ejectAllUsers & deleteRoom
+  async endRoom(roomId: number): Promise<boolean> {
+    try {
+      await this.ejectAllUsersIn(roomId);
+      await this.deleteRoom(roomId);
+    } catch (e) {
+      throw e;
+    }
+    return true;
+  }
+
+  // For development or test convenience
+  // Delete a room. If it's not empty room, forcibly eject all Users in the room.
+  async hardDeleteRoom(roomId: number): Promise<DeleteResult> {
+    const room = await this.roomRepo.findOneBy({ id: roomId });
+    if (!room) {
+      throw new BadRequestException('Invalid roomId');
+    }
+    const isNotEmpty = await this.userToRoomRepo.existsBy({ id: roomId });
+    if (isNotEmpty) {
+      await this.ejectAllUsersIn(roomId);
+    }
+    return this.roomRepo.delete(room);
   }
 }
