@@ -13,6 +13,13 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+// ****************
+export enum Gender {
+  Female = 'F',
+  Male = 'M',
+}
+// ****************
+
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
@@ -47,8 +54,11 @@ export class User {
   @Column({ type: 'varchar' })
   name: string;
 
-  @Column({ type: 'int' })
-  gender: number;
+  // @Column({ type: 'int' })
+  // gender: number;
+
+  @Column({ type: 'varchar' })
+  gender: Gender;
 
   @Transform(({ value }) => value.format('YYYY/MM/DD'))
   @Column({ type: 'date' })

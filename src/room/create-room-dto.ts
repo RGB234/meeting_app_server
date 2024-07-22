@@ -1,9 +1,9 @@
-import { IsNumber, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, IsUUID } from 'class-validator';
+import { Area } from './room.entity';
 
 export class CreateRoomDto {
   // PK
-  // @IsNotEmpty()
-  // @IsNumber()
+  // @IsUUID()
   // id: number;
 
   // @IsNumber()
@@ -14,6 +14,9 @@ export class CreateRoomDto {
 
   // @IsString()
   // title: String;
+
+  @IsNotEmpty()
+  location: Area;
 
   @IsNumber()
   maxMaleCount: number;

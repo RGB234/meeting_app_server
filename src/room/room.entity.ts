@@ -2,6 +2,13 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { UserToRoom } from './userToRoom.entity';
 import { Message } from 'src/chat/message.entity';
 
+export enum Area {
+  수원시_장안구 = '수원시 장안구',
+  수원시_권선구 = '수원시 권선구',
+  수원시_팔달구 = '수원시 팔달구',
+  수원시_영통구 = '수원시 영통구',
+}
+
 @Entity()
 export class Room {
   // bigint column type, used in SQL databases, doesn't fit into the regular number type and maps property to a string instead.
@@ -16,15 +23,13 @@ export class Room {
   @OneToMany(() => Message, (message) => message.room)
   public messages: Message[];
 
-  // // NOT FK. No need to use FK because User(id) never changes
-  // @Column()
-  // managerId: number;
+  // ****************
+  @Column()
+  location: Area;
+  // ****************
 
   @Column()
   createdAt: Date;
-
-  // @Column()
-  // title: String;
 
   @Column()
   maxMaleCount: number;

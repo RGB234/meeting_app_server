@@ -21,21 +21,21 @@ export class RoomController {
     private readonly userService: UserService,
   ) {}
 
-  @Post('create')
-  @UsePipes(
-    new ValidationPipe({
-      transform: true,
-      // If set to true, validator will strip validated (returned) object of any properties that do not use any validation decorators.
-      whitelist: true,
-    }),
-  )
-  async createRoom(@Body() createRoomDto: CreateRoomDto): Promise<void> {
-    const currentTime = new Date();
-    const roomId = await this.roomService.createRoom(
-      createRoomDto,
-      currentTime,
-    );
-  }
+  // @Post('create')
+  // @UsePipes(
+  //   new ValidationPipe({
+  //     transform: true,
+  //     // If set to true, validator will strip validated (returned) object of any properties that do not use any validation decorators.
+  //     whitelist: true,
+  //   }),
+  // )
+  // async createRoom(@Body() createRoomDto: CreateRoomDto): Promise<void> {
+  //   const currentTime = new Date();
+  //   const roomId = await this.roomService.createRoom(
+  //     createRoomDto,
+  //     currentTime,
+  //   );
+  // }
 
   @Delete('delete/:id')
   async deleteRoom(@Param('id') roomId: number) {

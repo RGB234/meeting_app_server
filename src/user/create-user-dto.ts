@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsDate, IsNumber, IsString, IsUUID } from 'class-validator';
 import { UUID } from 'crypto';
+import { Gender } from './user.entity';
 
 export class CreateUserDto {
   // ref. https://github.com/nestjs/swagger/issues/1043
@@ -20,9 +21,13 @@ export class CreateUserDto {
   @IsString()
   name: string;
 
+  // @ApiProperty()
+  // @IsNumber()
+  // gender: number;
+
   @ApiProperty()
-  @IsNumber()
-  gender: number;
+  @IsString()
+  gender: Gender;
 
   @ApiProperty()
   @IsString()

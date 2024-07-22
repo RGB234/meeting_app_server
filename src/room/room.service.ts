@@ -5,7 +5,9 @@ import { Room } from './room.entity';
 import { CreateRoomDto } from './create-room-dto';
 import { UserToRoom } from './userToRoom.entity';
 import { UserService } from 'src/user/user.service';
-import { User } from 'src/user/user.entity';
+import { Gender, User } from 'src/user/user.entity';
+import { Socket } from 'socket.io';
+import { FindRoomOptionDto } from './match-criteria-dto';
 
 @Injectable()
 export class RoomService {
@@ -41,7 +43,10 @@ export class RoomService {
     return this.roomRepo.findBy({ id: In(joinedRooms) });
   }
 
-  // *******************
+  async getRoomsByCriteria(criteria: FindRoomOptionDto): Promise<Room[]> {
+    const room = await this.roomRepo.findBy({ ...criteria });
+    return room;
+  }
 
   // create Join Table Record
   async joinRoom({
@@ -90,11 +95,13 @@ export class RoomService {
   }
 
   async createRoom(
+    client: Socket,
     createRoomDto: CreateRoomDto,
     createdAt: Date,
   ): Promise<number> {
     const newRoom = this.roomRepo.create({
       ...createRoomDto,
+      id: client.data.roomId,
       createdAt: createdAt,
       userToRooms: [],
       messages: [],
