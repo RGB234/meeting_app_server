@@ -2,12 +2,13 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, DeleteResult, In, Repository } from 'typeorm';
 import { Room } from './room.entity';
-import { CreateRoomDto } from './create-room-dto';
+import { CreateRoomDto, MatchCriteriaDto } from './create-room-dto';
 import { UserToRoom } from './userToRoom.entity';
 import { UserService } from 'src/user/user.service';
-import { Gender, User } from 'src/user/user.entity';
+import { User } from 'src/user/user.entity';
 import { Socket } from 'socket.io';
-import { FindRoomOptionDto } from './match-criteria-dto';
+import { UserToRoomDto } from './user-to-room-dto';
+import { UUID } from 'crypto';
 
 @Injectable()
 export class RoomService {
@@ -28,7 +29,7 @@ export class RoomService {
 
   // ** fetch data **
 
-  async getRoomById(roomId: number): Promise<Room | null> {
+  async getRoomById(roomId: UUID): Promise<Room | null> {
     return await this.roomRepo.findOneBy({ id: roomId });
   }
 
@@ -43,36 +44,43 @@ export class RoomService {
     return this.roomRepo.findBy({ id: In(joinedRooms) });
   }
 
-  async getRoomsByCriteria(criteria: FindRoomOptionDto): Promise<Room[]> {
+  async getRoomsByCriteria(criteria: MatchCriteriaDto): Promise<Room[]> {
     const room = await this.roomRepo.findBy({ ...criteria });
     return room;
   }
 
   // create Join Table Record
   async joinRoom({
-    userId,
-    roomId,
-    joinedAt,
+    userToRoom,
+    // userId,
+    // roomId,
+    // joinedAt,
   }: {
-    userId: number;
-    roomId: number;
-    joinedAt: Date;
+    userToRoom: UserToRoomDto;
+    // userId: number;
+    // roomId: number;
+    // joinedAt: Date;
   }): Promise<UserToRoom> {
-    const isValidRoomId = await this.roomRepo.existsBy({ id: roomId });
-    const isValidUserId = await this.userRepo.existsBy({ id: userId });
+    const room = await this.roomRepo.findOneBy({ id: userToRoom.roomId });
+    const user = await this.userRepo.findOneBy({ id: userToRoom.userId });
 
-    if (!isValidRoomId) throw new BadRequestException('Invalid roomId.');
-    if (!isValidUserId) throw new BadRequestException('Invalid userId');
+    if (!room) throw new BadRequestException('Invalid roomId.');
+    if (!user) throw new BadRequestException('Invalid userId');
 
-    const userToRoom = new UserToRoom();
-    userToRoom.userId = userId;
-    userToRoom.roomId = roomId;
-    userToRoom.joinedAt = joinedAt;
-    userToRoom.user = await this.userService.getUserById(userId);
-    userToRoom.room = await this.getRoomById(roomId);
+    const U2R = this.userToRoomRepo.create({
+      ...userToRoom,
+      joinedAt: new Date(),
+      user: user,
+      room: room,
+    });
+    // const userToRoom = new UserToRoom();
+    // userToRoom.userId = userId;
+    // userToRoom.roomId = roomId;
+    // userToRoom.joinedAt = joinedAt;
+    // userToRoom.user = await this.userService.getUserById(userId);
+    // userToRoom.room = await this.getRoomById(roomId);
 
-    const room = await this.getRoomById(roomId);
-    room.userToRooms = [userToRoom];
+    room.userToRooms = [U2R];
 
     return await this.userToRoomRepo.save(userToRoom);
   }
@@ -82,7 +90,7 @@ export class RoomService {
     roomId,
   }: {
     userId: number;
-    roomId: number;
+    roomId: UUID;
   }): Promise<DeleteResult> {
     const userToRoom = await this.userToRoomRepo.findOneBy({
       userId,
@@ -98,7 +106,7 @@ export class RoomService {
     client: Socket,
     createRoomDto: CreateRoomDto,
     createdAt: Date,
-  ): Promise<number> {
+  ): Promise<string> {
     const newRoom = this.roomRepo.create({
       ...createRoomDto,
       id: client.data.roomId,
@@ -112,7 +120,7 @@ export class RoomService {
   }
 
   // Eject all users who participated in the room
-  async ejectAllUsersIn(roomId: number): Promise<DeleteResult> {
+  async ejectAllUsersIn(roomId: string): Promise<DeleteResult> {
     const userToRooms = await this.userToRoomRepo.findBy({ roomId });
     if (userToRooms.length == 0) {
       return;
@@ -124,7 +132,7 @@ export class RoomService {
   }
 
   // delete a room only if it's empty
-  async deleteRoom(roomId: number): Promise<DeleteResult> {
+  async deleteRoom(roomId: string): Promise<DeleteResult> {
     const room = await this.roomRepo.findOneBy({ id: roomId });
     if (!room) {
       throw new BadRequestException('Invalid roomId');
@@ -140,7 +148,7 @@ export class RoomService {
   }
 
   // ejectAllUsers & deleteRoom
-  async endRoom(roomId: number): Promise<boolean> {
+  async endRoom(roomId: string): Promise<boolean> {
     try {
       await this.ejectAllUsersIn(roomId);
       await this.deleteRoom(roomId);
@@ -152,12 +160,12 @@ export class RoomService {
 
   // For development or test convenience
   // Delete a room. If it's not empty room, forcibly eject all Users in the room.
-  async forceDeleteRoom(roomId: number): Promise<DeleteResult> {
+  async forceDeleteRoom(roomId: string): Promise<DeleteResult> {
     const room = await this.roomRepo.findOneBy({ id: roomId });
     if (!room) {
       throw new BadRequestException('Invalid roomId');
     }
-    const isNotEmpty = await this.userToRoomRepo.existsBy({ id: roomId });
+    const isNotEmpty = await this.userToRoomRepo.existsBy({ roomId: roomId });
     if (isNotEmpty) {
       await this.ejectAllUsersIn(roomId);
     }

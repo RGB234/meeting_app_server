@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsNumber,
   IsString,
+  IsUUID,
 } from 'class-validator';
 import { UUID } from 'crypto';
 
@@ -16,8 +17,9 @@ export class CreateMessageDto {
   // id: number;
 
   @IsNotEmpty()
-  @IsNumber()
-  roomId: number;
+  // @IsNumber()
+  @IsUUID()
+  roomId: UUID;
 
   @IsNotEmpty()
   @IsNumber()

@@ -1,6 +1,14 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  OneToMany,
+  PrimaryColumn,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { UserToRoom } from './userToRoom.entity';
 import { Message } from 'src/chat/message.entity';
+import { IsString, IsUUID } from 'class-validator';
+import { UUID } from 'crypto';
 
 export enum Area {
   수원시_장안구 = '수원시 장안구',
@@ -12,8 +20,10 @@ export enum Area {
 @Entity()
 export class Room {
   // bigint column type, used in SQL databases, doesn't fit into the regular number type and maps property to a string instead.
-  @PrimaryGeneratedColumn({ type: 'int' })
-  id: number;
+  // @PrimaryGeneratedColumn({ type: 'var' })
+  @IsString()
+  @PrimaryColumn()
+  id: string;
 
   @OneToMany(() => UserToRoom, (UserToRoom) => UserToRoom.room, {
     cascade: true,

@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsNumber, IsString, IsUUID } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { Area } from './room.entity';
 
 export class CreateRoomDto {
@@ -19,8 +25,21 @@ export class CreateRoomDto {
   location: Area;
 
   @IsNumber()
-  maxMaleCount: number;
+  maxMaleCount: number = 4;
 
   @IsNumber()
-  maxFemaleCount: number;
+  maxFemaleCount: number = 4;
+}
+
+export class MatchCriteriaDto {
+  @IsNotEmpty()
+  location: Area;
+
+  @IsNumber()
+  @IsOptional()
+  maxMaleCount?: number;
+
+  @IsNumber()
+  @IsOptional()
+  maxFemaleCount?: number;
 }

@@ -1,6 +1,8 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Room } from './room.entity';
 import { User } from 'src/user/user.entity';
+import { IsString, IsUUID } from 'class-validator';
+import { UUID } from 'crypto';
 
 // explicitly set table name
 @Entity('user_to_room')
@@ -13,8 +15,9 @@ export class UserToRoom {
   public userId: number;
 
   // FK. REFERENCES Room(id) with DELETE CACADE
+  @IsString()
   @Column()
-  public roomId: number;
+  public roomId: string;
 
   @Column()
   public joinedAt: Date;

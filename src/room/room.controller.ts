@@ -10,9 +10,10 @@ import {
 } from '@nestjs/common';
 import { RoomService } from './room.service';
 import { CreateRoomDto } from './create-room-dto';
-import { UserToRoomDto } from './join-room-dto';
+import { UserToRoomDto } from './user-to-room-dto';
 import { UserService } from 'src/user/user.service';
 import { Request } from 'express';
+import { UUID } from 'crypto';
 
 @Controller('room')
 export class RoomController {
@@ -38,33 +39,32 @@ export class RoomController {
   // }
 
   @Delete('delete/:id')
-  async deleteRoom(@Param('id') roomId: number) {
+  async deleteRoom(@Param('id') roomId: UUID) {
     await this.roomService.deleteRoom(roomId);
   }
 
   @Delete('force-delete/:id')
-  async forceDeleteRoom(@Param('id') roomId: number) {
+  async forceDeleteRoom(@Param('id') roomId: UUID) {
     await this.roomService.forceDeleteRoom(roomId);
   }
 
   @Post('end/:id')
-  async endRoom(@Param('id') roomId: number) {
+  async endRoom(@Param('id') roomId: UUID) {
     await this.roomService.endRoom(roomId);
   }
 
   @Post('join/:id')
-  async joinRoom(@Param('id') roomId: number, @Req() req: any) {
+  async joinRoom(@Param('id') roomId: UUID, @Req() req: any) {
     const currentTime = new Date();
     const user = await this.userService.getUserByAuthId(req.user.sub);
-    await this.roomService.joinRoom({
-      userId: user.id,
-      roomId: roomId,
-      joinedAt: currentTime,
-    });
+    const u2r = new UserToRoomDto();
+    u2r.roomId = roomId;
+    u2r.userId = user.id;
+    await this.roomService.joinRoom({ userToRoom: u2r });
   }
 
   @Post('exit/:id')
-  async exitRoom(@Param('id') roomId: number, @Req() req: any) {
+  async exitRoom(@Param('id') roomId: UUID, @Req() req: any) {
     const user = await this.userService.getUserByAuthId(req.user.sub);
     this.roomService.exitRoom({
       userId: user.id,

@@ -1,3 +1,5 @@
+import { IsString, IsUUID } from 'class-validator';
+import { UUID } from 'crypto';
 import { Room } from 'src/room/room.entity';
 import { User } from 'src/user/user.entity';
 import {
@@ -20,7 +22,8 @@ export class Message {
 
   // FK. REFERENCES Room(id) with DELETE CASCADE option
   @Column()
-  roomId: number;
+  @IsString() // UUID. data type UUID is not supported in DBMS
+  roomId: string;
 
   @ManyToOne(() => User, (user) => user.messages)
   // ??

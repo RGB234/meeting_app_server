@@ -30,10 +30,7 @@ export class ChatService {
     return this.messagesRepository.find();
   }
 
-  async findOneMessage(
-    roomId: number,
-    writerId: UUID,
-  ): Promise<Message | null> {
+  async findOneMessage(roomId: UUID, writerId: UUID): Promise<Message | null> {
     const _room = await this.roomRepository.findOneBy({ id: roomId });
     const _user = await this.userRepository.findOneBy({
       authentication: await this.authRepository.findOneBy({
