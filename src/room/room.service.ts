@@ -29,7 +29,7 @@ export class RoomService {
 
   // ** fetch data **
 
-  async getRoomById(roomId: UUID): Promise<Room | null> {
+  async getRoomById(roomId: string): Promise<Room | null> {
     return await this.roomRepo.findOneBy({ id: roomId });
   }
 
@@ -109,7 +109,7 @@ export class RoomService {
   ): Promise<string> {
     const newRoom = this.roomRepo.create({
       ...createRoomDto,
-      id: client.data.roomId,
+      // id: client.data.roomId,
       createdAt: createdAt,
       userToRooms: [],
       messages: [],

@@ -6,6 +6,7 @@ import {
   IsUUID,
 } from 'class-validator';
 import { Area } from './room.entity';
+import { PrimaryColumn } from 'typeorm';
 
 export class CreateRoomDto {
   // PK
@@ -21,8 +22,12 @@ export class CreateRoomDto {
   // @IsString()
   // title: String;
 
+  @PrimaryColumn()
+  @IsUUID()
+  id: string;
+
   @IsNotEmpty()
-  location: Area;
+  location: string;
 
   @IsNumber()
   maxMaleCount: number = 4;

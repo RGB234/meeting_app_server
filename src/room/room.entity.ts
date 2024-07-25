@@ -35,7 +35,7 @@ export class Room {
 
   // ****************
   @Column()
-  location: Area;
+  location: string;
   // ****************
 
   @Column()

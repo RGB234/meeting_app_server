@@ -14,10 +14,19 @@ socket.on('connect', (userId) => {
   socket.emit('message', 'Hello from client!');
 });
 
+socket.emit(
+  'matchRoom',
+  (criteria = {
+    location: '수원시 장안구',
+  }),
+);
+
 socket.on('message', (message) => {
   console.log('Message received from server:', message);
 });
 
 socket.on('disconnect', () => {
+  socket.emit('exitRoom');
+
   console.log('Disconnected from WebSocket server');
 });
