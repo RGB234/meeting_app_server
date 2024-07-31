@@ -122,6 +122,7 @@ export class ChatGateway
 
       rooms.push(await this.roomService.getRoomById(newRoomId));
     }
+    // random matching among satisfying matching criteria
     const matchedRoom = rooms[Math.floor(Math.random() * rooms.length)];
     console.log(matchedRoom);
 
@@ -145,7 +146,7 @@ export class ChatGateway
       `exited room. client.rooms is now null : ${Object.values(client.rooms).join(' ')}`,
     );
 
-    this.roomService.exitRoom({
+    await this.roomService.exitRoom({
       userId: client.data.userId,
       roomId: client.data.roomId,
     });

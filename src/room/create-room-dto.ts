@@ -9,19 +9,6 @@ import { Area } from './room.entity';
 import { PrimaryColumn } from 'typeorm';
 
 export class CreateRoomDto {
-  // PK
-  // @IsUUID()
-  // id: number;
-
-  // @IsNumber()
-  // managerId: number;
-
-  // @IsDate()
-  // createdAt: Date;
-
-  // @IsString()
-  // title: String;
-
   @PrimaryColumn()
   @IsUUID()
   id: string;
@@ -34,6 +21,12 @@ export class CreateRoomDto {
 
   @IsNumber()
   maxFemaleCount: number = 4;
+
+  @IsNumber()
+  maleCount: number = 4;
+
+  @IsNumber()
+  femaleCount: number = 4;
 }
 
 export class MatchCriteriaDto {

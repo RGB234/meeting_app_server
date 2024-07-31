@@ -61,6 +61,14 @@ export class RoomService {
     // roomId: number;
     // joinedAt: Date;
   }): Promise<UserToRoom> {
+    const u2r = await this.userToRoomRepo.existsBy({
+      userId: userToRoom.userId,
+      roomId: userToRoom.roomId,
+    });
+
+    // already a user is in this room
+    if (u2r) throw new BadRequestException('A user is already in this room.');
+
     const room = await this.roomRepo.findOneBy({ id: userToRoom.roomId });
     const user = await this.userRepo.findOneBy({ id: userToRoom.userId });
 
@@ -73,16 +81,10 @@ export class RoomService {
       user: user,
       room: room,
     });
-    // const userToRoom = new UserToRoom();
-    // userToRoom.userId = userId;
-    // userToRoom.roomId = roomId;
-    // userToRoom.joinedAt = joinedAt;
-    // userToRoom.user = await this.userService.getUserById(userId);
-    // userToRoom.room = await this.getRoomById(roomId);
 
     room.userToRooms = [U2R];
 
-    return await this.userToRoomRepo.save(userToRoom);
+    return await this.datasource.manager.save(U2R);
   }
 
   async exitRoom({
@@ -99,7 +101,7 @@ export class RoomService {
     if (!userToRoom) {
       throw new BadRequestException('Invalid userId or roomId.');
     }
-    return this.userToRoomRepo.delete(userToRoom);
+    return await this.userToRoomRepo.delete(userToRoom);
   }
 
   async createRoom(

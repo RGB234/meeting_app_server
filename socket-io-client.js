@@ -25,6 +25,14 @@ socket.on('message', (message) => {
   console.log('Message received from server:', message);
 });
 
+// Intentional ERROR
+socket.emit(
+  'matchRoom',
+  (criteria = {
+    location: '수원시 장안구',
+  }),
+);
+
 socket.on('disconnect', () => {
   socket.emit('exitRoom');
 

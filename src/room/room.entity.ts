@@ -46,6 +46,12 @@ export class Room {
 
   @Column()
   maxFemaleCount: number;
+
+  @Column()
+  maleCount: number;
+
+  @Column()
+  femaleCount: number;
 }
 
 // CREATE TABLE room (
