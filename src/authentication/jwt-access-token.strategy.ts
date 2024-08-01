@@ -39,6 +39,7 @@ export class JwtAccessTokenStrategy extends PassportStrategy(
     // Make sure to match the request.body.id with the authentication ID in the payload (sub)
     // req.body.authId is not null When the request goes through AuthService.
     if (req.body?.authId && payload.sub != req.body.authId) {
+      console.log('authId does not match access token payload');
       throw new UnauthorizedException('ACCESS DENIDED');
     }
     // req.user = payload;

@@ -3,7 +3,7 @@ const io = require('socket.io-client');
 
 const socket = io('http://localhost:80/chat', {
   query: {
-    userId: 9,
+    userId: 11,
   },
 });
 

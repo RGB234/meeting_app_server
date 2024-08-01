@@ -25,7 +25,7 @@ export class UserController {
     return await this.userService.getUserByAuthId(body.authId);
   }
 
-  @Public()
+  // @Public()
   @Post('create')
   @UsePipes(
     new ValidationPipe({

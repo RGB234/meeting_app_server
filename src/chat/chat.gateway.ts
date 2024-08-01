@@ -9,6 +9,7 @@ import {
 import { UUID } from 'crypto';
 import { Server, Socket } from 'socket.io';
 import { CreateRoomDto, MatchCriteriaDto } from 'src/room/create-room-dto';
+import { Room } from 'src/room/room.entity';
 import { RoomService } from 'src/room/room.service';
 import { UserToRoomDto } from 'src/room/user-to-room-dto';
 import { v4 as uuidv4 } from 'uuid';
@@ -66,7 +67,7 @@ export class ChatGateway
     console.log(message);
 
     const rooms = Array.from(client.rooms);
-    console.log(`Client ${client.id} is in rooms: ${rooms.join(', ')}`);
+    console.log(`Client ${client.id} is in the rooms: ${rooms.join(', ')}`);
 
     // Broadcasting except this socket.
     client.to(roomId).emit('message', {
@@ -97,21 +98,27 @@ export class ChatGateway
 
     console.log('client rooms : ', client.rooms);
 
-    await this.roomService.joinRoom({ userToRoom: data });
+    try {
+      await this.roomService.joinRoom({ userToRoom: data });
+    } catch (err) {
+      throw err;
+    }
   }
 
   // Match making
   @SubscribeMessage('matchRoom')
   async matchRoomByCriteria(client: Socket, criteria: MatchCriteriaDto) {
     const rooms = await this.roomService.getRoomsByCriteria(criteria);
-
+    let matchedRoom: Room;
+    let created: boolean = false; // whether a room was created.
     if (rooms.length == 0) {
       // If there are no rooms that meet the search conditions
-      // create a new room that meet the search condition
       const createRoomDto = new CreateRoomDto();
       // allocate random UUID
       createRoomDto.id = this.generateRoomId();
+      // create a new room that meet the search condition
       createRoomDto.location = criteria.location;
+
       if (criteria.maxFemaleCount)
         createRoomDto.maxFemaleCount = criteria.maxFemaleCount;
       if (criteria.maxMaleCount)
@@ -120,27 +127,38 @@ export class ChatGateway
       const newRoomId = await this.createRoom(client, createRoomDto);
       console.log(`the room ${newRoomId} is created.`);
 
-      rooms.push(await this.roomService.getRoomById(newRoomId));
+      matchedRoom = await this.roomService.getRoomById(newRoomId);
+
+      created = true;
+    } else {
+      // random matching among satisfying matching criteria
+      matchedRoom = rooms[Math.floor(Math.random() * rooms.length)];
+      console.log('matchedRoom Id : ', matchedRoom.id);
     }
-    // random matching among satisfying matching criteria
-    const matchedRoom = rooms[Math.floor(Math.random() * rooms.length)];
-    console.log(matchedRoom);
-
-    client.data.roomId = matchedRoom.id;
-
-    console.log('matchedRoom Id : ', matchedRoom.id);
 
     const u2r = new UserToRoomDto();
-    u2r.roomId = client.data.roomId;
+    u2r.roomId = matchedRoom.id;
     u2r.userId = client.data.userId;
 
-    return await this.joinRoom(client, u2r);
+    try {
+      await this.joinRoom(client, u2r);
+    } catch (err) {
+      console.log('Matching ERROR :', err);
+      if (created) {
+        // rollback
+        await this.deleteRoom(client, matchedRoom.id);
+      }
+      throw err;
+    }
   }
 
   @SubscribeMessage('exitRoom')
   async exitRoom(client: Socket) {
+    if (!client.data.roomId) {
+      console.log('the client is not in any room');
+      return;
+    }
     client.leave(client.data.roomId);
-    client.data.roomId = null;
 
     console.log(
       `exited room. client.rooms is now null : ${Object.values(client.rooms).join(' ')}`,
@@ -150,13 +168,15 @@ export class ChatGateway
       userId: client.data.userId,
       roomId: client.data.roomId,
     });
+
+    client.data.roomId = null;
   }
 
   @SubscribeMessage('deleteRoom')
-  async deleteRoom(client: Socket, roomId: UUID) {
+  async deleteRoom(client: Socket, roomId: string) {
     client.leave(client.data.roomId);
     client.data.roomId = null;
-    this.roomService.deleteRoom(roomId);
+    await this.roomService.deleteRoom(roomId);
   }
 
   private generateRoomId(): string {

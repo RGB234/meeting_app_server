@@ -23,10 +23,10 @@ export class CreateRoomDto {
   maxFemaleCount: number = 4;
 
   @IsNumber()
-  maleCount: number = 4;
+  maleCount: number = 0;
 
   @IsNumber()
-  femaleCount: number = 4;
+  femaleCount: number = 0;
 }
 
 export class MatchCriteriaDto {
