@@ -1,3 +1,4 @@
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -43,7 +44,7 @@ export class ChatGateway
     client.leave(client.id);
 
     console.log(
-      `client (id : ${client.id} - uid : ${client.data.userId}) : room (id : ${client.data.roomId})`,
+      `client connected (id : ${client.id} - uid : ${client.data.userId}) : room (id : ${client.data.roomId})`,
     );
   }
 
@@ -64,10 +65,10 @@ export class ChatGateway
   sendMessage(client: Socket, message: string): string {
     const roomId = client.data.roomId;
 
-    console.log(message);
-
-    const rooms = Array.from(client.rooms);
-    console.log(`Client ${client.id} is in the rooms: ${rooms.join(', ')}`);
+    console.log(
+      `message to broadcast. received from client ${client.id}:`,
+      message,
+    );
 
     // Broadcasting except this socket.
     client.to(roomId).emit('message', {
@@ -75,7 +76,7 @@ export class ChatGateway
       message,
     });
 
-    return message;
+    return;
   }
 
   // Create new chat room containing match criteria information
@@ -93,21 +94,27 @@ export class ChatGateway
   // Join a room sellected by the matchmaker
   @SubscribeMessage('joinRoom')
   async joinRoom(client: Socket, data: UserToRoomDto) {
-    client.data.roomId = data.roomId;
-    client.join(client.data.roomId);
-
-    console.log('client rooms : ', client.rooms);
-
     try {
       await this.roomService.joinRoom({ userToRoom: data });
     } catch (err) {
-      throw err;
+      console.log(err);
     }
+    client.data.roomId = data.roomId;
+    client.join(client.data.roomId);
   }
 
   // Match making
   @SubscribeMessage('matchRoom')
   async matchRoomByCriteria(client: Socket, criteria: MatchCriteriaDto) {
+    if (client.rooms.size >= 1) {
+      console.log('matched room count : ', client.rooms.size);
+      // throw new BadRequestException(
+      //   'A room matched to the user already exists',
+      // );
+      console.log('A room matched to the user already exists');
+      return;
+    }
+
     const rooms = await this.roomService.getRoomsByCriteria(criteria);
     let matchedRoom: Room;
     let created: boolean = false; // whether a room was created.
@@ -158,18 +165,22 @@ export class ChatGateway
       console.log('the client is not in any room');
       return;
     }
+
+    try {
+      await this.roomService.exitRoom({
+        userId: client.data.userId,
+        roomId: client.data.roomId,
+      });
+    } catch (err) {
+      throw err;
+    }
+
     client.leave(client.data.roomId);
+    client.data.roomId = null;
 
     console.log(
-      `exited room. client.rooms is now null : ${Object.values(client.rooms).join(' ')}`,
+      `exited room. client.rooms is now null : ${Object.values(client.rooms)}`,
     );
-
-    await this.roomService.exitRoom({
-      userId: client.data.userId,
-      roomId: client.data.roomId,
-    });
-
-    client.data.roomId = null;
   }
 
   @SubscribeMessage('deleteRoom')

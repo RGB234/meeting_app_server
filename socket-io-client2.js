@@ -11,7 +11,7 @@ socket.on('connect', (userId) => {
   console.log('Connected to WebSocket server');
 
   // 서버로 메시지 전송
-  socket.emit('message', 'Hello from client!');
+  socket.emit(`message', 'Hello from client! ${userId}`);
 });
 
 socket.on('message', (message) => {
@@ -30,6 +30,8 @@ socket.emit(
     location: '수원시 장안구',
   }),
 );
+
+// setTimeout(() => {}, 1000);
 
 // Intentional ERROR
 socket.emit(

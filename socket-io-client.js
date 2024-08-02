@@ -11,7 +11,7 @@ socket.on('connect', (userId) => {
   console.log('Connected to WebSocket server');
 
   // 서버로 메시지 전송
-  socket.emit('message', 'Hello from client!');
+  socket.emit(`message', 'Hello from client! ${userId}`);
 });
 
 socket.on('message', (message) => {
@@ -32,12 +32,12 @@ socket.emit(
 );
 
 // Intentional ERROR
-socket.emit(
-  'matchRoom',
-  (criteria = {
-    location: '수원시 장안구',
-  }),
-);
+// socket.emit(
+//   'matchRoom',
+//   (criteria = {
+//     location: '수원시 장안구',
+//   }),
+// );
 
 process.on('SIGINT', () => {
   socket.emit('exitRoom');

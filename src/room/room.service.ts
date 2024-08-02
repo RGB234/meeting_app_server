@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, DeleteResult, In, Repository, Transaction } from 'typeorm';
 import { Room } from './room.entity';
@@ -61,7 +65,7 @@ export class RoomService {
     // roomId: number;
     // joinedAt: Date;
   }): Promise<void> {
-    const u2r = await this.userToRoomRepo.existsBy({
+    const u2r = await this.userToRoomRepo.findOneBy({
       userId: userToRoom.userId,
       roomId: userToRoom.roomId,
     });
@@ -70,58 +74,51 @@ export class RoomService {
     if (u2r) {
       console.log(`A user is already in this room (${userToRoom.roomId}).`);
       return;
-      // throw new BadRequestException('A user is already in this room.');
     }
 
-    const room = await this.roomRepo.findOneBy({ id: userToRoom.roomId });
+    const room = await this.roomRepo.findOne({
+      relations: { userToRooms: true },
+      where: { id: userToRoom.roomId },
+    });
     const user = await this.userRepo.findOneBy({ id: userToRoom.userId });
 
     if (!room) throw new BadRequestException('Invalid roomId.');
     if (!user) throw new BadRequestException('Invalid userId');
 
-    const U2R = this.userToRoomRepo.create({
+    const U2R = this.datasource.manager.create(UserToRoom, {
       ...userToRoom,
       joinedAt: new Date(),
       user: user,
       room: room,
     });
 
-    if (room.userToRooms) {
-      room.userToRooms.push(U2R);
-    } else {
-      room.userToRooms = [U2R];
-    }
+    // if (user.gender == Gender.Female) {
+    //   room.femaleCount += 1;
+    //   if (room.femaleCount >= room.maxFemaleCount)
+    //     throw new BadRequestException('Capacity exceeded');
+    // } else if (user.gender == Gender.Male) {
+    //   room.maleCount += 1;
+    //   if (room.maleCount >= room.maxMaleCount)
+    //     throw new BadRequestException('Capacity exceeded');
+    // } else {
+    //   throw new BadRequestException('invalid user gender property value');
+    // }
 
-    console.log('room.userToRooms');
-    console.log(room.userToRooms);
-    // room.userToRooms = [U2R];
+    await this.datasource.manager.save(U2R);
 
-    if (user.gender == Gender.Female) {
-      room.femaleCount += 1;
-      if (room.femaleCount >= room.maxFemaleCount)
-        throw new BadRequestException('Capacity exceeded');
-    } else if (user.gender == Gender.Male) {
-      room.maleCount += 1;
-      if (room.maleCount >= room.maxMaleCount)
-        throw new BadRequestException('Capacity exceeded');
-    } else {
-      throw new BadRequestException('invalid user gender property value');
-    }
+    // console.log(
+    //   await this.roomRepo.findOne({
+    //     relations: { userToRooms: true },
+    //     where: { id: U2R.roomId },
+    //   }),
+    // );
 
-    const queryRunner = this.datasource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      await this.datasource.manager.save(U2R);
-      await this.datasource.manager.save(room);
-    } catch (err) {
-      console.log(err);
-      await queryRunner.rollbackTransaction();
-      throw err;
-    } finally {
-      await queryRunner.release();
-    }
+    // console.log(
+    //   await this.userRepo.findOne({
+    //     relations: { userToRooms: true },
+    //     where: { id: U2R.userId },
+    //   }),
+    // );
   }
 
   async exitRoom({
@@ -129,7 +126,7 @@ export class RoomService {
     roomId,
   }: {
     userId: number;
-    roomId: UUID;
+    roomId: string; // UUID
   }): Promise<void> {
     const u2rToDelete = await this.userToRoomRepo.findOneBy({
       userId,
@@ -140,48 +137,62 @@ export class RoomService {
       throw new BadRequestException('Invalid userId or roomId.');
     }
 
-    const room = await this.roomRepo.findOneBy({ id: roomId });
+    const room = await this.roomRepo.findOne({
+      relations: {
+        // related userToRooms entities are loaded as room.userToRooms
+        // if this option is set false, room.userToRooms is undefined
+        userToRooms: true,
+      },
+      where: { id: roomId },
+    });
     if (!room) throw new BadRequestException('Invalid roomId (NOT FOUND)');
 
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) throw new BadRequestException('Invalid userId (NOT FOUND)');
 
-    if (user.gender == Gender.Female) {
-      room.femaleCount -= 1;
-    } else if (user.gender == Gender.Male) {
-      room.maleCount -= 1;
-    } else {
-      throw new BadRequestException('invalid user gender property value');
-    }
+    // if (user.gender == Gender.Female) {
+    //   room.femaleCount -= 1;
+    // } else if (user.gender == Gender.Male) {
+    //   room.maleCount -= 1;
+    // } else {
+    //   throw new BadRequestException('invalid user gender property value');
+    // }
 
-    if (room.userToRooms) {
-      room.userToRooms = room.userToRooms.filter((userToRoom) => {
-        return userToRoom.id !== u2rToDelete.id;
-      });
-    }
+    await this.datasource.manager.delete(UserToRoom, u2rToDelete);
 
-    console.log(`u2rs : ${room.userToRooms}`);
+    // console.log(
+    //   await this.roomRepo.findOne({
+    //     relations: { userToRooms: true },
+    //     where: { id: u2rToDelete.roomId },
+    //   }),
+    // );
 
-    const queryRunner = this.datasource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    // console.log(
+    //   await this.userRepo.findOne({
+    //     relations: { userToRooms: true },
+    //     where: { id: u2rToDelete.userId },
+    //   }),
+    // );
 
-    try {
-      await this.datasource.manager.delete(UserToRoom, u2rToDelete.id);
+    // const queryRunner = this.datasource.createQueryRunner();
+    // await queryRunner.connect();
+    // await queryRunner.startTransaction();
 
-      if (room.femaleCount == 0 && room.maleCount == 0) {
-        // No user left -> delete this empty room
-        await this.datasource.manager.delete(Room, room.id);
-      } else {
-        await this.datasource.manager.save(room);
-      }
-    } catch (err) {
-      console.log(err);
-      await queryRunner.rollbackTransaction();
-      throw err;
-    } finally {
-      await queryRunner.release();
-    }
+    // try {
+    //   // due to FK restriction, this transaction must be in this order
+    //   await queryRunner.manager.delete(UserToRoom, u2rToDelete.id);
+    //   // await queryRunner.manager.save(room);
+    //   // if (room.femaleCount == 0 && room.maleCount == 0) {
+    //   //   // No user left -> delete this empty room
+    //   //   await queryRunner.manager.delete(Room, room.id);
+    //   // }
+    // } catch (err) {
+    //   console.log(err);
+    //   await queryRunner.rollbackTransaction();
+    //   throw err;
+    // } finally {
+    //   await queryRunner.release();
+    // }
   }
 
   async createRoom(
@@ -214,7 +225,7 @@ export class RoomService {
   }
 
   // delete a room only if it's empty
-  async deleteRoom(roomId: string): Promise<DeleteResult> {
+  async deleteRoom(roomId: string): Promise<void> {
     const room = await this.roomRepo.findOneBy({ id: roomId });
     if (!room) {
       throw new BadRequestException('Invalid roomId');
@@ -226,7 +237,20 @@ export class RoomService {
       );
     }
 
-    return this.datasource.manager.delete(Room, room.id);
+    const queryRunner = this.datasource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      await queryRunner.manager.delete(Room, room);
+    } catch (err) {
+      console.log(err);
+      await queryRunner.rollbackTransaction();
+    } finally {
+      await queryRunner.release();
+    }
+
+    // return this.datasource.manager.delete(Room, room.id);
   }
 
   // ejectAllUsers & deleteRoom
