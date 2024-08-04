@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  HttpCode,
+  HttpException,
+  HttpStatus,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -7,13 +13,12 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { UUID } from 'crypto';
 import { Server, Socket } from 'socket.io';
-import { CreateRoomDto, MatchCriteriaDto } from 'src/room/create-room-dto';
+import { CreateRoomDto } from 'src/room/create-room-dto';
+import { MatchCriteriaDto } from 'src/room/match-room-dto';
 import { Room } from 'src/room/room.entity';
 import { RoomService } from 'src/room/room.service';
 import { UserToRoomDto } from 'src/room/user-to-room-dto';
-import { v4 as uuidv4 } from 'uuid';
 
 @WebSocketGateway(80, {
   namespace: 'chat',
@@ -27,6 +32,8 @@ import { v4 as uuidv4 } from 'uuid';
 export class ChatGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
+  MAX_CAPACITY = 4; // 방 최대 인원 제한수
+
   constructor(private readonly roomService: RoomService) {}
   @WebSocketServer()
   server: Server;
@@ -42,6 +49,7 @@ export class ChatGateway
     client.data.userId = query.userId;
     // 기본적으로 client.id 라는 room 에 참가된 상태로 초기화된다.
     client.leave(client.id);
+    client.data.roomId = null;
 
     console.log(
       `client connected (id : ${client.id} - uid : ${client.data.userId}) : room (id : ${client.data.roomId})`,
@@ -80,16 +88,10 @@ export class ChatGateway
   }
 
   // Create new chat room containing match criteria information
-  @SubscribeMessage('createRoom')
-  async createRoom(client: Socket, data: CreateRoomDto) {
-    const room = await this.roomService.getRoomById(client.data.roomId);
-    if (room) {
-      // exception handling
-      console.log(`the room ${client.data.roomId} is already exits.`);
-      return;
-    }
-    return await this.roomService.createRoom(client, data, new Date());
-  }
+  // @SubscribeMessage('createRoom')
+  // async createRoom(client: Socket, createRoomDto: CreateRoomDto) {
+  //   return await this.roomService.createRoom(createRoomDto);
+  // }
 
   // Join a room sellected by the matchmaker
   @SubscribeMessage('joinRoom')
@@ -100,38 +102,51 @@ export class ChatGateway
       console.log(err);
     }
     client.data.roomId = data.roomId;
-    client.join(client.data.roomId);
+    client.join(data.roomId);
   }
 
   // Match making
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+    }),
+  )
   @SubscribeMessage('matchRoom')
   async matchRoomByCriteria(client: Socket, criteria: MatchCriteriaDto) {
-    if (client.rooms.size >= 1) {
+    if (client.data.roomId != null || client.rooms.size != 0) {
       console.log('matched room count : ', client.rooms.size);
-      // throw new BadRequestException(
-      //   'A room matched to the user already exists',
-      // );
-      console.log('A room matched to the user already exists');
-      return;
+      throw new HttpException(
+        'A room matched to the user already exists',
+        HttpStatus.CONFLICT,
+      );
     }
 
     const rooms = await this.roomService.getRoomsByCriteria(criteria);
     let matchedRoom: Room;
     let created: boolean = false; // whether a room was created.
+
+    // If there are no rooms that meet the search conditions
     if (rooms.length == 0) {
-      // If there are no rooms that meet the search conditions
       const createRoomDto = new CreateRoomDto();
       // allocate random UUID
-      createRoomDto.id = this.generateRoomId();
+      createRoomDto.id = this.roomService.generateRoomId();
       // create a new room that meet the search condition
       createRoomDto.location = criteria.location;
 
-      if (criteria.maxFemaleCount)
+      const isValidMaxCount = (
+        maxCount: number | null,
+        maxCapacity: number,
+      ): Boolean => {
+        return maxCount != null && maxCount > 0 && maxCount <= maxCapacity;
+      };
+
+      if (isValidMaxCount(createRoomDto.maxFemaleCount, this.MAX_CAPACITY))
         createRoomDto.maxFemaleCount = criteria.maxFemaleCount;
-      if (criteria.maxMaleCount)
+      if (isValidMaxCount(createRoomDto.maxMaleCount, this.MAX_CAPACITY))
         createRoomDto.maxMaleCount = criteria.maxMaleCount;
 
-      const newRoomId = await this.createRoom(client, createRoomDto);
+      const newRoomId = await this.roomService.createRoom(createRoomDto);
       console.log(`the room ${newRoomId} is created.`);
 
       matchedRoom = await this.roomService.getRoomById(newRoomId);
@@ -140,8 +155,8 @@ export class ChatGateway
     } else {
       // random matching among satisfying matching criteria
       matchedRoom = rooms[Math.floor(Math.random() * rooms.length)];
-      console.log('matchedRoom Id : ', matchedRoom.id);
     }
+    console.log('matchedRoom Id : ', matchedRoom.id);
 
     const u2r = new UserToRoomDto();
     u2r.roomId = matchedRoom.id;
@@ -161,16 +176,21 @@ export class ChatGateway
 
   @SubscribeMessage('exitRoom')
   async exitRoom(client: Socket) {
-    if (!client.data.roomId) {
+    if (!client.data.roomId || client.rooms.size != 0) {
       console.log('the client is not in any room');
       return;
     }
-
     try {
-      await this.roomService.exitRoom({
-        userId: client.data.userId,
-        roomId: client.data.roomId,
+      client.rooms.forEach(async (room: string) => {
+        await this.roomService.exitRoom({
+          userId: client.data.userId,
+          roomId: room, // a element of the rooms is roomId (string)
+        });
       });
+      // await this.roomService.exitRoom({
+      //   userId: client.data.userId,
+      //   roomId: client.data.roomId,
+      // });
     } catch (err) {
       throw err;
     }
@@ -188,10 +208,5 @@ export class ChatGateway
     client.leave(client.data.roomId);
     client.data.roomId = null;
     await this.roomService.deleteRoom(roomId);
-  }
-
-  private generateRoomId(): string {
-    // return `room:${uuidv4()}`;
-    return uuidv4();
   }
 }

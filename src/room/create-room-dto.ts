@@ -1,11 +1,4 @@
-import {
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-} from 'class-validator';
-import { Area } from './room.entity';
+import { IsNotEmpty, IsNumber, IsOptional, IsUUID } from 'class-validator';
 import { PrimaryColumn } from 'typeorm';
 
 export class CreateRoomDto {
@@ -16,28 +9,26 @@ export class CreateRoomDto {
   @IsNotEmpty()
   location: string;
 
+  @IsOptional()
   @IsNumber()
-  maxMaleCount: number = 4;
+  maxMaleCount?: number;
 
+  @IsOptional()
   @IsNumber()
-  maxFemaleCount: number = 4;
+  maxFemaleCount?: number;
 
   @IsNumber()
   maleCount: number = 0;
 
   @IsNumber()
   femaleCount: number = 0;
-}
 
-export class MatchCriteriaDto {
-  @IsNotEmpty()
-  location: Area;
-
-  @IsNumber()
-  @IsOptional()
-  maxMaleCount?: number;
-
-  @IsNumber()
-  @IsOptional()
-  maxFemaleCount?: number;
+  constructor() {
+    if (this.maxMaleCount === undefined) {
+      this.maxMaleCount = 4;
+    }
+    if (this.maxFemaleCount === undefined) {
+      this.maxFemaleCount = 4;
+    }
+  }
 }

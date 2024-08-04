@@ -1,18 +1,16 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-} from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, DeleteResult, In, Repository, Transaction } from 'typeorm';
+import { DataSource, DeleteResult, In, Repository } from 'typeorm';
+
 import { Room } from './room.entity';
-import { CreateRoomDto, MatchCriteriaDto } from './create-room-dto';
 import { UserToRoom } from './userToRoom.entity';
 import { UserService } from 'src/user/user.service';
 import { Gender, User } from 'src/user/user.entity';
-import { Socket } from 'socket.io';
+import { v4 as uuidv4 } from 'uuid';
+
+import { CreateRoomDto } from './create-room-dto';
+import { MatchCriteriaDto } from './match-room-dto';
 import { UserToRoomDto } from './user-to-room-dto';
-import { UUID } from 'crypto';
 import { UpdateRoomDto } from './update-room-dto';
 
 @Injectable()
@@ -35,6 +33,8 @@ export class RoomService {
   // ** fetch data **
 
   async getRoomById(roomId: string): Promise<Room | null> {
+    if (!roomId) return null;
+
     return await this.roomRepo.findOneBy({ id: roomId });
   }
 
@@ -50,13 +50,18 @@ export class RoomService {
   }
 
   async getRoomsByCriteria(criteria: MatchCriteriaDto): Promise<Room[]> {
-    const room = await this.roomRepo.findBy({ ...criteria });
-    return room;
+    const rooms = await this.roomRepo.find({ where: { ...criteria } });
+    console.log('search result: ', rooms);
+    return rooms;
+  }
+
+  generateRoomId(): string {
+    return uuidv4();
   }
 
   async updateRoom(updateRoomDto: UpdateRoomDto) {
     const room = await this.roomRepo.findOneBy({ id: updateRoomDto.id });
-    if (!room) throw new BadRequestException('Invalid roomId');
+    if (!room) throw new HttpException('Invalid roomId', HttpStatus.NOT_FOUND);
 
     const { id, ...updateProperties } = updateRoomDto;
     try {
@@ -71,7 +76,7 @@ export class RoomService {
   async refreshNumsOf(roomId: string): Promise<void> {
     const U2Rs = await this.userToRoomRepo.find({
       relations: { user: true },
-      where: { roomId: roomId },
+      where: { roomId },
     });
     const users = U2Rs.map((u2r) => {
       return u2r.user;
@@ -122,16 +127,29 @@ export class RoomService {
       relations: { userToRooms: true },
       where: { id: userToRoom.roomId },
     });
-    const user = await this.userRepo.findOneBy({ id: userToRoom.userId });
+    if (!room) throw new HttpException('Invalid roomId.', HttpStatus.NOT_FOUND);
 
-    if (!room) throw new BadRequestException('Invalid roomId.');
-    if (!user) throw new BadRequestException('Invalid userId');
+    const user = await this.userRepo.findOneBy({ id: userToRoom.userId });
+    if (!user) throw new HttpException('Invalid userId', HttpStatus.NOT_FOUND);
+
+    // max capacity restriction
+    if (
+      user.gender == Gender.Female &&
+      room.femaleCount >= room.maxFemaleCount
+    ) {
+      throw new HttpException('Maximum capacity exceeded', HttpStatus.CONFLICT);
+    } else if (
+      user.gender == Gender.Male &&
+      room.maleCount >= room.maxMaleCount
+    ) {
+      throw new HttpException('Maximum capacity exceeded', HttpStatus.CONFLICT);
+    }
 
     const U2R = this.datasource.manager.create(UserToRoom, {
       ...userToRoom,
       joinedAt: new Date(),
-      user: user,
-      room: room,
+      // user: user,
+      // room: room,
     });
 
     await this.datasource.manager.save(U2R);
@@ -167,7 +185,10 @@ export class RoomService {
     });
     if (!u2rToDelete) {
       console.log(`userId : ${userId}, roomId : ${roomId}`);
-      throw new BadRequestException('Invalid userId or roomId.');
+      throw new HttpException(
+        'Invalid userId or roomId.',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     const room = await this.roomRepo.findOne({
@@ -178,18 +199,18 @@ export class RoomService {
       },
       where: { id: roomId },
     });
-    if (!room) throw new BadRequestException('Invalid roomId (NOT FOUND)');
+    if (!room)
+      throw new HttpException(
+        'Invalid roomId (NOT FOUND)',
+        HttpStatus.NOT_FOUND,
+      );
 
     const user = await this.userRepo.findOneBy({ id: userId });
-    if (!user) throw new BadRequestException('Invalid userId (NOT FOUND)');
-
-    // if (user.gender == Gender.Female) {
-    //   room.femaleCount -= 1;
-    // } else if (user.gender == Gender.Male) {
-    //   room.maleCount -= 1;
-    // } else {
-    //   throw new BadRequestException('invalid user gender property value');
-    // }
+    if (!user)
+      throw new HttpException(
+        'Invalid userId (NOT FOUND)',
+        HttpStatus.NOT_FOUND,
+      );
 
     await this.datasource.manager.delete(UserToRoom, u2rToDelete);
 
@@ -230,20 +251,22 @@ export class RoomService {
     // }
   }
 
-  async createRoom(
-    client: Socket,
-    createRoomDto: CreateRoomDto,
-    createdAt: Date,
-  ): Promise<string> {
+  async createRoom(createRoomDto: CreateRoomDto): Promise<string | null> {
+    const room = await this.getRoomById(createRoomDto.id);
+    if (room) {
+      console.log(`the room ${createRoomDto.id} already exits.`);
+      return;
+    }
+
     const newRoom = this.roomRepo.create({
       ...createRoomDto,
-      // id: client.data.roomId,
-      createdAt: createdAt,
-      userToRooms: [],
-      messages: [],
+      createdAt: new Date(),
+      // userToRooms: [],
+      // messages: [],
     });
 
     await this.datasource.manager.save(newRoom);
+
     return newRoom.id;
   }
 
@@ -252,7 +275,6 @@ export class RoomService {
     const userToRooms = await this.userToRoomRepo.findBy({ roomId });
     if (userToRooms.length == 0) {
       return;
-      // throw new BadRequestException('the room is already empty');
     }
     const ids = userToRooms.map((e) => e.id);
 
@@ -263,12 +285,13 @@ export class RoomService {
   async deleteRoom(roomId: string): Promise<void> {
     const room = await this.roomRepo.findOneBy({ id: roomId });
     if (!room) {
-      throw new BadRequestException('Invalid roomId');
+      throw new HttpException('Invalid roomId', HttpStatus.NOT_FOUND);
     }
     const isNotEmpty = await this.userToRoomRepo.existsBy({ roomId: roomId });
     if (isNotEmpty) {
-      throw new BadRequestException(
+      throw new HttpException(
         'It can be deleted only when there is no user in the room.',
+        HttpStatus.NOT_FOUND,
       );
     }
 
@@ -304,7 +327,7 @@ export class RoomService {
   async forceDeleteRoom(roomId: string): Promise<DeleteResult> {
     const room = await this.roomRepo.findOneBy({ id: roomId });
     if (!room) {
-      throw new BadRequestException('Invalid roomId');
+      throw new HttpException('Invalid roomId', HttpStatus.NOT_FOUND);
     }
     const isNotEmpty = await this.userToRoomRepo.existsBy({ roomId: roomId });
     if (isNotEmpty) {
