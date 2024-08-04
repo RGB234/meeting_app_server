@@ -179,7 +179,7 @@ export class ChatGateway
     client.data.roomId = null;
 
     console.log(
-      `exited room. client.rooms is now null : ${Object.values(client.rooms)}`,
+      `client (${client.id}) exited room. client.rooms is now null : ${Object.values(client.rooms)}`,
     );
   }
 

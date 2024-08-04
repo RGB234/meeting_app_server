@@ -13,6 +13,7 @@ import { Gender, User } from 'src/user/user.entity';
 import { Socket } from 'socket.io';
 import { UserToRoomDto } from './user-to-room-dto';
 import { UUID } from 'crypto';
+import { UpdateRoomDto } from './update-room-dto';
 
 @Injectable()
 export class RoomService {
@@ -51,6 +52,47 @@ export class RoomService {
   async getRoomsByCriteria(criteria: MatchCriteriaDto): Promise<Room[]> {
     const room = await this.roomRepo.findBy({ ...criteria });
     return room;
+  }
+
+  async updateRoom(updateRoomDto: UpdateRoomDto) {
+    const room = await this.roomRepo.findOneBy({ id: updateRoomDto.id });
+    if (!room) throw new BadRequestException('Invalid roomId');
+
+    const { id, ...updateProperties } = updateRoomDto;
+    try {
+      await this.roomRepo.update({ id: id }, updateProperties);
+    } catch (err) {
+      console.log(err);
+      throw err;
+    }
+  }
+
+  // Update current number of people in the room
+  async refreshNumsOf(roomId: string): Promise<void> {
+    const U2Rs = await this.userToRoomRepo.find({
+      relations: { user: true },
+      where: { roomId: roomId },
+    });
+    const users = U2Rs.map((u2r) => {
+      return u2r.user;
+    });
+
+    let femaleCount = 0;
+    let maleCount = 0;
+    users.forEach((user) => {
+      if (user.gender == Gender.Female) {
+        femaleCount++;
+      } else if (user.gender == Gender.Male) {
+        maleCount++;
+      }
+    });
+
+    console.log(`count of F/M : ${femaleCount} / ${maleCount}`);
+    const updateRoomDto = new UpdateRoomDto();
+    updateRoomDto.id = roomId;
+    updateRoomDto.femaleCount = femaleCount;
+    updateRoomDto.maleCount = maleCount;
+    await this.updateRoom(updateRoomDto);
   }
 
   // create Join Table Record
@@ -92,18 +134,6 @@ export class RoomService {
       room: room,
     });
 
-    // if (user.gender == Gender.Female) {
-    //   room.femaleCount += 1;
-    //   if (room.femaleCount >= room.maxFemaleCount)
-    //     throw new BadRequestException('Capacity exceeded');
-    // } else if (user.gender == Gender.Male) {
-    //   room.maleCount += 1;
-    //   if (room.maleCount >= room.maxMaleCount)
-    //     throw new BadRequestException('Capacity exceeded');
-    // } else {
-    //   throw new BadRequestException('invalid user gender property value');
-    // }
-
     await this.datasource.manager.save(U2R);
 
     // console.log(
@@ -119,6 +149,9 @@ export class RoomService {
     //     where: { id: U2R.userId },
     //   }),
     // );
+
+    // Update current number of people in the room
+    await this.refreshNumsOf(userToRoom.roomId);
   }
 
   async exitRoom({
@@ -173,6 +206,8 @@ export class RoomService {
     //     where: { id: u2rToDelete.userId },
     //   }),
     // );
+
+    await this.refreshNumsOf(roomId);
 
     // const queryRunner = this.datasource.createQueryRunner();
     // await queryRunner.connect();
