@@ -22,6 +22,6 @@ import { AuthService } from 'src/authentication/auth.service';
   //   You can do this by exporting the whole module, like this:
   // exports: [TypeOrmModule],
   providers: [ChatService, ChatGateway, RoomService, UserService, AuthService],
-  controllers: [ChatController],
+  // controllers: [ChatController],
 })
 export class ChatModule {}

@@ -95,17 +95,27 @@ export class ChatGateway
 
   // Join a room sellected by the matchmaker
   @SubscribeMessage('joinRoom')
-  async joinRoom(client: Socket, data: UserToRoomDto) {
+  async joinRoom(client: Socket, data: UserToRoomDto): Promise<boolean> {
     try {
       await this.roomService.joinRoom({ userToRoom: data });
+
+      client.data.roomId = data.roomId;
+      client.join(data.roomId);
+
+      return true;
     } catch (err) {
       console.log(err);
+      return false;
     }
-    client.data.roomId = data.roomId;
-    client.join(data.roomId);
   }
 
   // Match making
+  // 검색 기준에 맞는 방 탐색
+  // 1-a 있으면 -> 그냥 2로 넘어간다
+  // 1-b 없으면 -> 새로 만듦
+  // 방에 참가 - socket 정보 추가 및 DB 업데이트
+  // 2-a 참가 성공
+  // 2-b 실패 (인원수 제한) -> 1-b 로 돌아간다.
   @UsePipes(
     new ValidationPipe({
       transform: true,
@@ -114,49 +124,62 @@ export class ChatGateway
   )
   @SubscribeMessage('matchRoom')
   async matchRoomByCriteria(client: Socket, criteria: MatchCriteriaDto) {
+    // check if it's Unnecessary Request
     if (client.data.roomId != null || client.rooms.size != 0) {
-      console.log('matched room count : ', client.rooms.size);
-      throw new HttpException(
-        'A room matched to the user already exists',
-        HttpStatus.CONFLICT,
+      // console.log('matched room count : ', client.rooms.size);
+      console.log(
+        `A room matched to the user already exists (client.rooms.size : ${client.rooms.size})`,
       );
+      // throw new HttpException(
+      //   'A room matched to the user already exists',
+      //   HttpStatus.CONFLICT,
+      // );
+      return;
+    }
+    const joinedRooms = await this.roomService.getAllJoinedRooms(
+      client.data.userId,
+    );
+    if (joinedRooms.length > 0) {
+      console.log(`< A user already joined a room >`);
+      joinedRooms.forEach((room) => {
+        console.log(room.id);
+      });
+
+      client.data.roomId = joinedRooms.at(0).id;
+      client.join(client.data.roomId);
+      return;
     }
 
+    const userId = client.data.userId;
     const rooms = await this.roomService.getRoomsByCriteria(criteria);
+
+    const MAX_TRIAL = Math.min(rooms.length, 10);
+    console.log(MAX_TRIAL);
+
     let matchedRoom: Room;
-    let created: boolean = false; // whether a room was created.
-
-    // If there are no rooms that meet the search conditions
-    if (rooms.length == 0) {
-      const createRoomDto = new CreateRoomDto();
-      // allocate random UUID
-      createRoomDto.id = this.roomService.generateRoomId();
-      // create a new room that meet the search condition
-      createRoomDto.location = criteria.location;
-
-      const isValidMaxCount = (
-        maxCount: number | null,
-        maxCapacity: number,
-      ): Boolean => {
-        return maxCount != null && maxCount > 0 && maxCount <= maxCapacity;
-      };
-
-      if (isValidMaxCount(createRoomDto.maxFemaleCount, this.MAX_CAPACITY))
-        createRoomDto.maxFemaleCount = criteria.maxFemaleCount;
-      if (isValidMaxCount(createRoomDto.maxMaleCount, this.MAX_CAPACITY))
-        createRoomDto.maxMaleCount = criteria.maxMaleCount;
-
-      const newRoomId = await this.roomService.createRoom(createRoomDto);
-      console.log(`the room ${newRoomId} is created.`);
-
-      matchedRoom = await this.roomService.getRoomById(newRoomId);
-
-      created = true;
-    } else {
-      // random matching among satisfying matching criteria
+    let trial = 1;
+    while (rooms.length > 0 && trial <= MAX_TRIAL) {
       matchedRoom = rooms[Math.floor(Math.random() * rooms.length)];
+      if (this.roomService.checkCapacityLimit(userId, matchedRoom.id)) {
+        // true : Passing the capacity limit
+        const u2r = new UserToRoomDto();
+        u2r.roomId = matchedRoom.id;
+        u2r.userId = userId;
+
+        try {
+          await this.joinRoom(client, u2r);
+        } catch (err) {
+          console.log('Err occurred during joining the room :', err);
+        }
+        return;
+      }
+      trial++;
     }
-    console.log('matchedRoom Id : ', matchedRoom.id);
+    // create new room
+    const newRoomId = await this.roomService.createRoomByCriteria(criteria);
+    console.log(`the room ${newRoomId} is created.`);
+
+    matchedRoom = await this.roomService.getRoomById(newRoomId);
 
     const u2r = new UserToRoomDto();
     u2r.roomId = matchedRoom.id;
@@ -166,17 +189,15 @@ export class ChatGateway
       await this.joinRoom(client, u2r);
     } catch (err) {
       console.log('Matching ERROR :', err);
-      if (created) {
-        // rollback
-        await this.deleteRoom(client, matchedRoom.id);
-      }
-      throw err;
+      // rollback
+      await this.deleteRoom(client, matchedRoom.id);
     }
+    return;
   }
 
   @SubscribeMessage('exitRoom')
   async exitRoom(client: Socket) {
-    if (!client.data.roomId || client.rooms.size != 0) {
+    if (!client.data.roomId && client.rooms.size != 0) {
       console.log('the client is not in any room');
       return;
     }
@@ -187,19 +208,15 @@ export class ChatGateway
           roomId: room, // a element of the rooms is roomId (string)
         });
       });
-      // await this.roomService.exitRoom({
-      //   userId: client.data.userId,
-      //   roomId: client.data.roomId,
-      // });
     } catch (err) {
-      throw err;
+      console.log(err);
     }
 
     client.leave(client.data.roomId);
     client.data.roomId = null;
 
     console.log(
-      `client (${client.id}) exited room. client.rooms is now null : ${Object.values(client.rooms)}`,
+      `client (${client.id}) exited room. roomID : ${client.data.roomId}, rooms: ${Object.values(client.rooms)}`,
     );
   }
 

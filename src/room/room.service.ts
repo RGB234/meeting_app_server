@@ -15,6 +15,7 @@ import { UpdateRoomDto } from './update-room-dto';
 
 @Injectable()
 export class RoomService {
+  private MAX_CAPACITY = 4;
   constructor(
     private datasource: DataSource,
 
@@ -26,8 +27,6 @@ export class RoomService {
 
     @InjectRepository(UserToRoom)
     private userToRoomRepo: Repository<UserToRoom>,
-
-    private userService: UserService,
   ) {}
 
   // ** fetch data **
@@ -60,16 +59,46 @@ export class RoomService {
   }
 
   async updateRoom(updateRoomDto: UpdateRoomDto) {
-    const room = await this.roomRepo.findOneBy({ id: updateRoomDto.id });
+    const room = await this.roomRepo.findOne({
+      relations: {},
+      where: { id: updateRoomDto.id },
+    });
     if (!room) throw new HttpException('Invalid roomId', HttpStatus.NOT_FOUND);
 
-    const { id, ...updateProperties } = updateRoomDto;
+    // const { id, ...updateProperties } = updateRoomDto;
+
+    const updatedRoom = this.roomRepo.create({
+      ...room,
+      ...updateRoomDto,
+    });
+
+    Object.values(updatedRoom).forEach((prop) => {
+      if (prop != undefined) {
+        console.log('!', prop);
+      }
+    });
+
+    const queryRunner = this.datasource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
-      await this.roomRepo.update({ id: id }, updateProperties);
+      await queryRunner.manager.save(updatedRoom);
+
+      await queryRunner.commitTransaction();
     } catch (err) {
       console.log(err);
-      throw err;
+      await queryRunner.rollbackTransaction();
+    } finally {
+      await queryRunner.release();
     }
+
+    // try {
+    //   await this.roomRepo.update({ id: id }, updateProperties);
+    // } catch (err) {
+    //   console.log(err);
+    //   throw err;
+    // }
   }
 
   // Update current number of people in the room
@@ -100,6 +129,32 @@ export class RoomService {
     await this.updateRoom(updateRoomDto);
   }
 
+  async checkCapacityLimit(userId: number, roomId: string): Promise<boolean> {
+    const queryRunner = this.datasource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) throw new HttpException('Invalid userId', HttpStatus.NOT_FOUND);
+
+    const room = await this.roomRepo.findOneBy({ id: roomId });
+    if (!room) throw new HttpException('Invalid roomId.', HttpStatus.NOT_FOUND);
+
+    const isFemale = user.gender == Gender.Female;
+    const currentCount = isFemale ? room.femaleCount : room.maleCount;
+    const maxCount = isFemale ? room.maxFemaleCount : room.maxMaleCount;
+
+    if (currentCount >= maxCount) {
+      // throw new HttpException('Maximum capacity exceeded', HttpStatus.CONFLICT);
+      await queryRunner.commitTransaction();
+      await queryRunner.release();
+      return false;
+    }
+    await queryRunner.commitTransaction();
+    await queryRunner.release();
+    return true;
+  }
+
   // create Join Table Record
   async joinRoom({
     userToRoom,
@@ -119,8 +174,11 @@ export class RoomService {
 
     // already a user is in this room
     if (u2r) {
-      console.log(`A user is already in this room (${userToRoom.roomId}).`);
-      return;
+      // console.log(`A user is already in this room (${userToRoom.roomId}).`);
+      throw new HttpException(
+        `A user is already in this room (${userToRoom.roomId}).`,
+        HttpStatus.CONFLICT,
+      );
     }
 
     const room = await this.roomRepo.findOne({
@@ -132,27 +190,36 @@ export class RoomService {
     const user = await this.userRepo.findOneBy({ id: userToRoom.userId });
     if (!user) throw new HttpException('Invalid userId', HttpStatus.NOT_FOUND);
 
-    // max capacity restriction
-    if (
-      user.gender == Gender.Female &&
-      room.femaleCount >= room.maxFemaleCount
-    ) {
-      throw new HttpException('Maximum capacity exceeded', HttpStatus.CONFLICT);
-    } else if (
-      user.gender == Gender.Male &&
-      room.maleCount >= room.maxMaleCount
-    ) {
+    if (!(await this.checkCapacityLimit(user.id, room.id))) {
       throw new HttpException('Maximum capacity exceeded', HttpStatus.CONFLICT);
     }
 
     const U2R = this.datasource.manager.create(UserToRoom, {
       ...userToRoom,
       joinedAt: new Date(),
-      // user: user,
-      // room: room,
+      user: user,
+      room: room,
     });
 
-    await this.datasource.manager.save(U2R);
+    // await this.datasource.manager.save(U2R);
+
+    const queryRunner = this.datasource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      await queryRunner.manager.save(U2R);
+
+      await queryRunner.commitTransaction();
+    } catch (err) {
+      console.log(err);
+      await queryRunner.rollbackTransaction();
+    } finally {
+      await queryRunner.release();
+    }
+
+    // Update current number of people in the room
+    await this.refreshNumsOf(userToRoom.roomId);
 
     // console.log(
     //   await this.roomRepo.findOne({
@@ -167,9 +234,6 @@ export class RoomService {
     //     where: { id: U2R.userId },
     //   }),
     // );
-
-    // Update current number of people in the room
-    await this.refreshNumsOf(userToRoom.roomId);
   }
 
   async exitRoom({
@@ -212,7 +276,23 @@ export class RoomService {
         HttpStatus.NOT_FOUND,
       );
 
-    await this.datasource.manager.delete(UserToRoom, u2rToDelete);
+    // await this.datasource.manager.delete(UserToRoom, u2rToDelete);
+
+    const queryRunner = this.datasource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      await queryRunner.manager.delete(UserToRoom, u2rToDelete.id);
+      await queryRunner.commitTransaction();
+    } catch (err) {
+      console.log(err);
+      await queryRunner.rollbackTransaction();
+    } finally {
+      await queryRunner.release();
+    }
+
+    await this.refreshNumsOf(roomId);
 
     // console.log(
     //   await this.roomRepo.findOne({
@@ -227,28 +307,6 @@ export class RoomService {
     //     where: { id: u2rToDelete.userId },
     //   }),
     // );
-
-    await this.refreshNumsOf(roomId);
-
-    // const queryRunner = this.datasource.createQueryRunner();
-    // await queryRunner.connect();
-    // await queryRunner.startTransaction();
-
-    // try {
-    //   // due to FK restriction, this transaction must be in this order
-    //   await queryRunner.manager.delete(UserToRoom, u2rToDelete.id);
-    //   // await queryRunner.manager.save(room);
-    //   // if (room.femaleCount == 0 && room.maleCount == 0) {
-    //   //   // No user left -> delete this empty room
-    //   //   await queryRunner.manager.delete(Room, room.id);
-    //   // }
-    // } catch (err) {
-    //   console.log(err);
-    //   await queryRunner.rollbackTransaction();
-    //   throw err;
-    // } finally {
-    //   await queryRunner.release();
-    // }
   }
 
   async createRoom(createRoomDto: CreateRoomDto): Promise<string | null> {
@@ -265,9 +323,54 @@ export class RoomService {
       // messages: [],
     });
 
-    await this.datasource.manager.save(newRoom);
+    // await this.datasource.manager.save(newRoom);
+
+    const queryRunner = this.datasource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      await queryRunner.manager.save(newRoom);
+      await queryRunner.commitTransaction();
+    } catch (err) {
+      console.log(err);
+      await queryRunner.rollbackTransaction();
+    } finally {
+      await queryRunner.release();
+    }
 
     return newRoom.id;
+  }
+
+  async createRoomByCriteria(criteria: MatchCriteriaDto) {
+    const createRoomDto = new CreateRoomDto();
+    // allocate random UUID
+    createRoomDto.id = this.generateRoomId();
+    // create a new room that meet the search condition
+    createRoomDto.location = criteria.location;
+
+    const isValidMaxCount = (
+      maxCount: number | null,
+      maxCapacity: number,
+    ): Boolean => {
+      return maxCount !== undefined && maxCount > 0 && maxCount <= maxCapacity;
+    };
+
+    if (isValidMaxCount(createRoomDto.maxFemaleCount, this.MAX_CAPACITY)) {
+      createRoomDto.maxFemaleCount = criteria.maxFemaleCount;
+    } else {
+      createRoomDto.maxFemaleCount = this.MAX_CAPACITY;
+    }
+
+    if (isValidMaxCount(createRoomDto.maxMaleCount, this.MAX_CAPACITY)) {
+      createRoomDto.maxMaleCount = criteria.maxMaleCount;
+    } else {
+      createRoomDto.maxMaleCount = this.MAX_CAPACITY;
+    }
+
+    const newRoomId = await this.createRoom(createRoomDto);
+
+    return newRoomId;
   }
 
   // Eject all users who participated in the room
@@ -278,7 +381,21 @@ export class RoomService {
     }
     const ids = userToRooms.map((e) => e.id);
 
-    return await this.userToRoomRepo.delete({ id: In(ids) });
+    // return await this.userToRoomRepo.delete({ id: In(ids) });
+
+    const queryRunner = this.datasource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      await queryRunner.manager.delete(UserToRoom, ids);
+      await queryRunner.commitTransaction();
+    } catch (err) {
+      console.log(err);
+      await queryRunner.rollbackTransaction();
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   // delete a room only if it's empty
@@ -301,6 +418,7 @@ export class RoomService {
 
     try {
       await queryRunner.manager.delete(Room, room);
+      await queryRunner.commitTransaction();
     } catch (err) {
       console.log(err);
       await queryRunner.rollbackTransaction();

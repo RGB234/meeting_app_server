@@ -23,5 +23,5 @@ export class UpdateRoomDto extends IntersectionType(
   // Unlike CreateDto, there is no default value.
   @IsOptional()
   @IsNumber()
-  maxMaleCoint?: number;
+  maxMaleCount?: number;
 }

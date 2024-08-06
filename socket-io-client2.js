@@ -33,17 +33,17 @@ socket.emit(
   }),
 );
 
-setTimeout(() => {}, 1000);
-
-// Intentional ERROR
-// => 이미 한 방에 매칭되었음에도 다른 방에 매칭됨. 예외처리가 적용안되는 문제
-// 또한, exitRoom 실행 시 client.data.roomId 1개 방만 나가지므로, 위의 문제가 발생하여 2개 이상의 방에 매칭되었을 경우 추가 문제 발생
-socket.emit(
-  'matchRoom',
-  (criteria = {
-    location: '수원시 장안구',
-  }),
-);
+setTimeout(() => {
+  // Intentional ERROR
+  // => 이미 한 방에 매칭되었음에도 다른 방에 매칭됨. 예외처리가 적용안되는 문제
+  // 또한, exitRoom 실행 시 client.data.roomId 1개 방만 나가지므로, 위의 문제가 발생하여 2개 이상의 방에 매칭되었을 경우 추가 문제 발생
+  socket.emit(
+    'matchRoom',
+    (criteria = {
+      location: '수원시 장안구',
+    }),
+  );
+}, 100);
 
 process.on('SIGINT', () => {
   socket.emit('exitRoom');
