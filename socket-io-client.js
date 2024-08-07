@@ -12,6 +12,9 @@ socket.on('connect', (userId) => {
 
   // 서버로 메시지 전송
   socket.emit(`message', 'Hello from client! ${userId}`);
+  // UserToRoom 테이블에 소켓의 userId 가 있는 레코드 (비정상적인 경우 둘 이상일 수 있음) 중 하나에 참가.
+  // 없다면 아무것도 하지 않음.
+  socket.emit('enterRoom');
 });
 
 socket.on('message', (message) => {

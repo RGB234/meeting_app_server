@@ -12,6 +12,7 @@ import { CreateRoomDto } from './create-room-dto';
 import { MatchCriteriaDto } from './match-room-dto';
 import { UserToRoomDto } from './user-to-room-dto';
 import { UpdateRoomDto } from './update-room-dto';
+import { Socket } from 'socket.io';
 
 @Injectable()
 export class RoomService {
@@ -92,13 +93,6 @@ export class RoomService {
     } finally {
       await queryRunner.release();
     }
-
-    // try {
-    //   await this.roomRepo.update({ id: id }, updateProperties);
-    // } catch (err) {
-    //   console.log(err);
-    //   throw err;
-    // }
   }
 
   // Update current number of people in the room
@@ -156,7 +150,7 @@ export class RoomService {
   }
 
   // create Join Table Record
-  async joinRoom({
+  async createUserToRoomRecord({
     userToRoom,
     // userId,
     // roomId,
@@ -236,18 +230,18 @@ export class RoomService {
     // );
   }
 
-  async exitRoom({
+  async deleteUserToRoomRecord({
     userId,
     roomId,
   }: {
     userId: number;
     roomId: string; // UUID
   }): Promise<void> {
-    const u2rToDelete = await this.userToRoomRepo.findOneBy({
+    const U2RsToDelete = await this.userToRoomRepo.findBy({
       userId,
       roomId,
     });
-    if (!u2rToDelete) {
+    if (U2RsToDelete.length == 0) {
       console.log(`userId : ${userId}, roomId : ${roomId}`);
       throw new HttpException(
         'Invalid userId or roomId.',
@@ -255,35 +249,14 @@ export class RoomService {
       );
     }
 
-    const room = await this.roomRepo.findOne({
-      relations: {
-        // related userToRooms entities are loaded as room.userToRooms
-        // if this option is set false, room.userToRooms is undefined
-        userToRooms: true,
-      },
-      where: { id: roomId },
-    });
-    if (!room)
-      throw new HttpException(
-        'Invalid roomId (NOT FOUND)',
-        HttpStatus.NOT_FOUND,
-      );
-
-    const user = await this.userRepo.findOneBy({ id: userId });
-    if (!user)
-      throw new HttpException(
-        'Invalid userId (NOT FOUND)',
-        HttpStatus.NOT_FOUND,
-      );
-
-    // await this.datasource.manager.delete(UserToRoom, u2rToDelete);
+    const U2RIdsToDelete: number[] = U2RsToDelete.map((u2r) => u2r.id);
 
     const queryRunner = this.datasource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      await queryRunner.manager.delete(UserToRoom, u2rToDelete.id);
+      await queryRunner.manager.delete(UserToRoom, U2RIdsToDelete);
       await queryRunner.commitTransaction();
     } catch (err) {
       console.log(err);
@@ -293,6 +266,29 @@ export class RoomService {
     }
 
     await this.refreshNumsOf(roomId);
+
+    // -- debuging --
+
+    // const room = await this.roomRepo.findOne({
+    //   relations: {
+    //     // related userToRooms entities are loaded as room.userToRooms
+    //     // if this option is set false, room.userToRooms is undefined
+    //     userToRooms: true,
+    //   },
+    //   where: { id: roomId },
+    // });
+    // if (!room)
+    //   throw new HttpException(
+    //     'Invalid roomId (NOT FOUND)',
+    //     HttpStatus.NOT_FOUND,
+    //   );
+
+    // const user = await this.userRepo.findOneBy({ id: userId });
+    // if (!user)
+    //   throw new HttpException(
+    //     'Invalid userId (NOT FOUND)',
+    //     HttpStatus.NOT_FOUND,
+    //   );
 
     // console.log(
     //   await this.roomRepo.findOne({
@@ -307,6 +303,18 @@ export class RoomService {
     //     where: { id: u2rToDelete.userId },
     //   }),
     // );
+  }
+
+  async deleteAllUserToRoomRecordsOfUser(userId: number) {
+    const U2RsToDelete = await this.userToRoomRepo.findBy({ userId });
+    try {
+      U2RsToDelete.map(async (u2r) => {
+        await this.userToRoomRepo.delete(u2r.id);
+      });
+    } catch (err) {
+      console.log(err);
+      throw err;
+    }
   }
 
   async createRoom(createRoomDto: CreateRoomDto): Promise<string | null> {

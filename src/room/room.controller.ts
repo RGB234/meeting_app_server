@@ -60,13 +60,13 @@ export class RoomController {
     const u2r = new UserToRoomDto();
     u2r.roomId = roomId;
     u2r.userId = user.id;
-    await this.roomService.joinRoom({ userToRoom: u2r });
+    await this.roomService.createUserToRoomRecord({ userToRoom: u2r });
   }
 
   @Post('exit/:id')
   async exitRoom(@Param('id') roomId: UUID, @Req() req: any) {
     const user = await this.userService.getUserByAuthId(req.user.sub);
-    this.roomService.exitRoom({
+    this.roomService.deleteUserToRoomRecord({
       userId: user.id,
       roomId: roomId,
     });

@@ -68,6 +68,29 @@ export class ChatGateway
     );
   }
 
+  async checkClientIsNotInAnyRoom(client: Socket): Promise<boolean> {
+    if (client.data.roomId != null || client.rooms.size != 0) {
+      console.log(
+        `A room matched to the user already exists (client.rooms.size : ${client.rooms.size})`,
+      );
+      return false;
+    }
+    const joinedRooms = await this.roomService.getAllJoinedRooms(
+      client.data.userId,
+    );
+    if (joinedRooms.length > 0) {
+      console.log(`< A user already joined a room >`);
+      joinedRooms.forEach((room) => {
+        console.log(room.id);
+      });
+
+      client.data.roomId = joinedRooms.at(0).id;
+      client.join(client.data.roomId);
+      return false;
+    }
+    return true;
+  }
+
   // message broadcasting
   @SubscribeMessage('message')
   sendMessage(client: Socket, message: string): string {
@@ -87,26 +110,53 @@ export class ChatGateway
     return;
   }
 
-  // Create new chat room containing match criteria information
-  // @SubscribeMessage('createRoom')
-  // async createRoom(client: Socket, createRoomDto: CreateRoomDto) {
-  //   return await this.roomService.createRoom(createRoomDto);
-  // }
-
   // Join a room sellected by the matchmaker
   @SubscribeMessage('joinRoom')
-  async joinRoom(client: Socket, data: UserToRoomDto): Promise<boolean> {
-    try {
-      await this.roomService.joinRoom({ userToRoom: data });
+  async joinRoom(client: Socket, u2r: UserToRoomDto): Promise<boolean> {
+    // check if it's Unnecessary Request
+    if (!(await this.checkClientIsNotInAnyRoom(client))) {
+      return;
+    }
 
-      client.data.roomId = data.roomId;
-      client.join(data.roomId);
+    try {
+      await this.roomService.createUserToRoomRecord({ userToRoom: u2r });
+
+      client.data.roomId = u2r.roomId;
+      client.join(u2r.roomId);
 
       return true;
     } catch (err) {
       console.log(err);
       return false;
     }
+  }
+
+  // A client socket joins the room using userId-roomId mapping saved in the database
+  @SubscribeMessage('enterRoom')
+  async enterRoom(client: Socket) {
+    if (client.data.roomId && client.rooms.size > 0) {
+      // consider user already entered a room. (duplicated request)
+      // return;
+      throw new HttpException(
+        `The user already entered a room (${client.data.roomId}), the size of rooms : ${client.rooms.size}`,
+        HttpStatus.CONFLICT,
+      );
+    }
+    const joinedRooms = await this.roomService.getAllJoinedRooms(
+      client.data.userId,
+    );
+
+    if (joinedRooms == null) {
+      return;
+    }
+
+    const roomId = joinedRooms.at(0).id;
+    client.data.roomId = roomId;
+    client.join(roomId);
+
+    console.log(
+      `the client (${client.data.userId}) entered a room (${client.data.roomId})`,
+    );
   }
 
   // Match making
@@ -123,28 +173,7 @@ export class ChatGateway
   @SubscribeMessage('matchRoom')
   async matchRoomByCriteria(client: Socket, criteria: MatchCriteriaDto) {
     // check if it's Unnecessary Request
-    if (client.data.roomId != null || client.rooms.size != 0) {
-      // console.log('matched room count : ', client.rooms.size);
-      console.log(
-        `A room matched to the user already exists (client.rooms.size : ${client.rooms.size})`,
-      );
-      // throw new HttpException(
-      //   'A room matched to the user already exists',
-      //   HttpStatus.CONFLICT,
-      // );
-      return;
-    }
-    const joinedRooms = await this.roomService.getAllJoinedRooms(
-      client.data.userId,
-    );
-    if (joinedRooms.length > 0) {
-      console.log(`< A user already joined a room >`);
-      joinedRooms.forEach((room) => {
-        console.log(room.id);
-      });
-
-      client.data.roomId = joinedRooms.at(0).id;
-      client.join(client.data.roomId);
+    if (!(await this.checkClientIsNotInAnyRoom(client))) {
       return;
     }
 
@@ -192,6 +221,8 @@ export class ChatGateway
     return;
   }
 
+  // By default, One user only can have one room at the same time.
+  // but to handle cases where an error occurred and more than 2 rooms were joined, exit All joined rooms.
   @SubscribeMessage('exitRoom')
   async exitRoom(client: Socket) {
     if (!client.data.roomId && client.rooms.size != 0) {
@@ -200,7 +231,7 @@ export class ChatGateway
     }
     try {
       client.rooms.forEach(async (room: string) => {
-        await this.roomService.exitRoom({
+        await this.roomService.deleteUserToRoomRecord({
           userId: client.data.userId,
           roomId: room, // a element of the rooms is roomId (string)
         });
