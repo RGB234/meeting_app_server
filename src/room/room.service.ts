@@ -72,11 +72,11 @@ export class RoomService {
       ...updateRoomDto,
     });
 
-    Object.values(updatedRoom).forEach((prop) => {
-      if (prop != undefined) {
-        console.log('!', prop);
-      }
-    });
+    // Object.values(updatedRoom).forEach((prop) => {
+    //   if (prop != undefined) {
+    //     console.log('!', prop);
+    //   }
+    // });
 
     const queryRunner = this.datasource.createQueryRunner();
     await queryRunner.connect();
@@ -350,19 +350,19 @@ export class RoomService {
     createRoomDto.location = criteria.location;
 
     const isValidMaxCount = (
-      maxCount: number | null,
+      maxCount: number | null | undefined,
       maxCapacity: number,
     ): Boolean => {
-      return maxCount !== undefined && maxCount > 0 && maxCount <= maxCapacity;
+      return maxCount != undefined && maxCount > 0 && maxCount <= maxCapacity;
     };
 
-    if (isValidMaxCount(createRoomDto.maxFemaleCount, this.MAX_CAPACITY)) {
+    if (isValidMaxCount(criteria.maxFemaleCount, this.MAX_CAPACITY)) {
       createRoomDto.maxFemaleCount = criteria.maxFemaleCount;
     } else {
       createRoomDto.maxFemaleCount = this.MAX_CAPACITY;
     }
 
-    if (isValidMaxCount(createRoomDto.maxMaleCount, this.MAX_CAPACITY)) {
+    if (isValidMaxCount(criteria.maxMaleCount, this.MAX_CAPACITY)) {
       createRoomDto.maxMaleCount = criteria.maxMaleCount;
     } else {
       createRoomDto.maxMaleCount = this.MAX_CAPACITY;

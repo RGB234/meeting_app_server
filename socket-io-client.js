@@ -28,7 +28,7 @@ socket.emit(
   'matchRoom',
   (criteria = {
     location: '수원시 장안구',
-    maxFemaleCount: 1,
+    // maxFemaleCount: 1,
     maxMaleCount: 1,
   }),
 );

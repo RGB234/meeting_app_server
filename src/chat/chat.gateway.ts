@@ -110,12 +110,10 @@ export class ChatGateway
   }
 
   // Match making
-  // 검색 기준에 맞는 방 탐색
-  // 1-a 있으면 -> 그냥 2로 넘어간다
-  // 1-b 없으면 -> 새로 만듦
-  // 방에 참가 - socket 정보 추가 및 DB 업데이트
-  // 2-a 참가 성공
-  // 2-b 실패 (인원수 제한) -> 1-b 로 돌아간다.
+  // 1. 검색 기준에 맞는 방 탐색
+  // 2-a 탐색 결과가 있음 : 탐색한 방 중에서 무작위로 입장 시도. 일정 횟수 내에 입장 실패시 3번으로
+  // 2-b 탐색 결과가 없음 : 3번으로
+  // 3. 새로 방을 만들고 입장함.
   @UsePipes(
     new ValidationPipe({
       transform: true,
@@ -154,7 +152,6 @@ export class ChatGateway
     const rooms = await this.roomService.getRoomsByCriteria(criteria);
 
     const MAX_TRIAL = Math.min(rooms.length, 10);
-    console.log(MAX_TRIAL);
 
     let matchedRoom: Room;
     let trial = 1;
