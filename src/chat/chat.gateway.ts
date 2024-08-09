@@ -146,7 +146,7 @@ export class ChatGateway
       client.data.userId,
     );
 
-    if (joinedRooms == null) {
+    if (joinedRooms.length == 0) {
       return;
     }
 
