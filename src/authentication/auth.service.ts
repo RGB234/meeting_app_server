@@ -82,6 +82,10 @@ export class AuthService {
       sub: auth.id,
       authEmail: auth.email,
     };
+    // const payload : AccessTokenPayload = {
+    //   sub: auth.id,
+    //   email : auth.email,
+    // }
     const access_token = await this.jwtService.signAsync(payload, {
       secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
       expiresIn: parseInt(this.configService.get<string>('JWT_ACCESS_EXP')),
@@ -90,7 +94,10 @@ export class AuthService {
   }
 
   async issueRefreshToken(auth: Authentication) {
-    const payload = {
+    // const payload = {
+    //   sub: auth.id,
+    // };
+    const payload: RefreshTokenPayload = {
       sub: auth.id,
     };
     const refresh_token = await this.jwtService.signAsync(payload, {

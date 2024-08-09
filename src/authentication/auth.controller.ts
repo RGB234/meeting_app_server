@@ -24,6 +24,7 @@ import { LoginDto } from './dtos/login-dto';
 import { Response } from 'express';
 import { JwtRefreshTokenGuard } from './jwt-refresh-token.guard';
 
+// @UseGuards(JwtAccessTokenGuard) // -> set as global guard within auth.module.ts
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -55,7 +56,6 @@ export class AuthController {
     return tokenSet;
   }
 
-  // @UseGuards(JwtAccessTokenGuard) // default
   @UseGuards(JwtRefreshTokenGuard)
   @Post('logout')
   async logout(@Req() req: any, @Res() res: Response) {

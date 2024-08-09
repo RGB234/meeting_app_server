@@ -1,13 +1,13 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { ExtractJwt, Strategy as JwtStrategy } from 'passport-jwt';
 import { AuthService } from './auth.service';
 import { Request } from 'express';
 
 @Injectable()
 export class JwtRefreshTokenStrategy extends PassportStrategy(
-  Strategy,
+  JwtStrategy,
   'jwt_refresh_token',
 ) {
   constructor(
@@ -30,8 +30,6 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
     });
   }
 
-  // The validate method of your JwtStrategy will only be called when the token has been verified in terms of the encryption
-  // (corrrect key was used to sign it, in your case secretKey) and it is not expired.
   async validate(req: Request, payload: RefreshTokenPayload) {
     const refreshToken = req?.cookies?.refresh_token;
     const isValid = await this.authService.validateRefreshToken(
@@ -39,7 +37,7 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
       refreshToken,
     );
     if (!isValid) throw new UnauthorizedException('Invalid refresh token');
-    // request 에 리턴값 저장 : 코드를 작성하지 않아도 자동으로 passport 가 수행하는 동작임
+    // request 에 리턴값 저장 : 코드를 작성하지 않아도 자동으로 PassportStrategy 가 수행하는 동작임
     // req.user = payload;
     return payload;
   }

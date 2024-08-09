@@ -9,10 +9,12 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtAccessTokenGuard } from './jwt-access-token.guard';
 import { JwtRefreshTokenStrategy } from './jwt-refresh-token.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { UserService } from 'src/user/user.service';
+import { User } from 'src/user/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Authentication]),
+    TypeOrmModule.forFeature([Authentication, User]),
     // JwtModule.registerAsync({
     //   imports: [ConfigModule],
     //   inject: [ConfigService],
@@ -39,6 +41,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     JwtRefreshTokenStrategy,
     // JwtRefreshTokenGuard,
     // JwtAccessTokenGuard,
+    UserService,
 
     // register the Guard as a global guard
     // using the following construction in any module

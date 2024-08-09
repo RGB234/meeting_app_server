@@ -2,9 +2,12 @@ import {
   HttpCode,
   HttpException,
   HttpStatus,
+  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -14,12 +17,14 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { JwtAccessTokenGuard } from 'src/authentication/jwt-access-token.guard';
 import { CreateRoomDto } from 'src/room/create-room-dto';
 import { MatchCriteriaDto } from 'src/room/match-room-dto';
 import { Room } from 'src/room/room.entity';
 import { RoomService } from 'src/room/room.service';
 import { UserToRoomDto } from 'src/room/user-to-room-dto';
 
+@UseGuards(JwtAccessTokenGuard)
 @WebSocketGateway(80, {
   namespace: 'chat',
   cors: {
@@ -34,7 +39,10 @@ export class ChatGateway
 {
   MAX_CAPACITY = 4; // 방 최대 인원 제한수
 
-  constructor(private readonly roomService: RoomService) {}
+  constructor(
+    private readonly roomService: RoomService,
+    private readonly configService: ConfigService,
+  ) {}
   @WebSocketServer()
   server: Server;
 
@@ -45,11 +53,15 @@ export class ChatGateway
   // 소켓 연결 후(?) 실행되는 메서드
   public async handleConnection(client: Socket, ...args: any[]) {
     const query = client.handshake.query;
-    // client 는 동시에 한 개의 room 만 참여가능
     client.data.userId = query.userId;
     // 기본적으로 client.id 라는 room 에 참가된 상태로 초기화된다.
+    // client 는 동시에 한 개의 room 만 참여가능한 비즈니스 로직으로 구현할 것이다.
     client.leave(client.id);
     client.data.roomId = null;
+
+    // Authentication
+    const accessToken = client.handshake.auth.access_token;
+    client.data.access_token = accessToken;
 
     console.log(
       `client connected (id : ${client.id} - uid : ${client.data.userId}) : room (id : ${client.data.roomId})`,
@@ -84,8 +96,8 @@ export class ChatGateway
         console.log(room.id);
       });
 
-      client.data.roomId = joinedRooms.at(0).id;
-      client.join(client.data.roomId);
+      // client.data.roomId = joinedRooms.at(0).id;
+      // client.join(client.data.roomId);
       return false;
     }
     return true;
@@ -115,6 +127,7 @@ export class ChatGateway
   async joinRoom(client: Socket, u2r: UserToRoomDto): Promise<boolean> {
     // check if it's Unnecessary Request
     if (!(await this.checkClientIsNotInAnyRoom(client))) {
+      await this.enterRoom(client);
       return;
     }
 
@@ -174,6 +187,7 @@ export class ChatGateway
   async matchRoomByCriteria(client: Socket, criteria: MatchCriteriaDto) {
     // check if it's Unnecessary Request
     if (!(await this.checkClientIsNotInAnyRoom(client))) {
+      await this.enterRoom(client);
       return;
     }
 
@@ -225,7 +239,8 @@ export class ChatGateway
   // but to handle cases where an error occurred and more than 2 rooms were joined, exit All joined rooms.
   @SubscribeMessage('exitRoom')
   async exitRoom(client: Socket) {
-    if (!client.data.roomId && client.rooms.size != 0) {
+    console.log(`before exit : ${client.data.roomId}, ${client.rooms.size}`);
+    if (client.data.roomId == null && client.rooms.size == 0) {
       console.log('the client is not in any room');
       return;
     }

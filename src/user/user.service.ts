@@ -25,7 +25,12 @@ export class UserService {
   }
 
   async getAuthByUserId(userId: number): Promise<Authentication | null> {
-    const user = await this.userRepository.findOneBy({ id: userId });
+    const user = await this.userRepository.findOne({
+      relations: {
+        authentication: true,
+      },
+      where: { id: userId },
+    });
     return user.authentication;
   }
 

@@ -2,8 +2,13 @@
 const io = require('socket.io-client');
 
 const socket = io('http://localhost:80/chat', {
+  auth: {
+    access_token:
+      // 'aaa',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWI0ODM3Zi0yYzE0LTQ5Y2YtYWM5NS0xNWQyYjhlZmM4ZGUiLCJhdXRoRW1haWwiOiJPeE9AbmF2ZXIuY29tIiwiaWF0IjoxNzIzMTk2ODY2LCJleHAiOjE3MjMxOTc0NjZ9.TcD0n5VPg5tSoJuquBk9qrBAZaw_hwQedbxQm6ik10M',
+  },
   query: {
-    userId: 9,
+    userId: 11,
   },
 });
 
