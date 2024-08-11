@@ -36,12 +36,14 @@ export class JwtAccessTokenStrategy extends PassportStrategy(
     });
   }
 
+  // If a user is found and the credentials are valid, the user is returned so Passport can complete its tasks
+  // (e.g., creating the user property on the Request object), and the request handling pipeline can continue.
+  // If it's not found, we throw an exception and let our exceptions layer handle it.
+
   // The validate method of a JwtStrategy will only be called when the correct secretKey is used to encrypt a token
   // and JWT is not expired.
   async validate(req: Request | Socket, payload: AccessTokenPayload) {
     console.log('4수');
-    // Passport will build a user object  based on the return value of our validate() method,
-    // and attach it as a property on the Request object. (i.e. request.user)
 
     // Check whether the authId in the payload matches the authId of the sender of the request.
     if ((req as Request).body) {

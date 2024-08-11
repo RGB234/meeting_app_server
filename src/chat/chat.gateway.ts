@@ -1,5 +1,4 @@
 import {
-  HttpCode,
   HttpException,
   HttpStatus,
   UseGuards,
@@ -7,7 +6,6 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { JwtModule, JwtService } from '@nestjs/jwt';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -18,7 +16,6 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtAccessTokenGuard } from 'src/authentication/jwt-access-token.guard';
-import { CreateRoomDto } from 'src/room/create-room-dto';
 import { MatchCriteriaDto } from 'src/room/match-room-dto';
 import { Room } from 'src/room/room.entity';
 import { RoomService } from 'src/room/room.service';
@@ -49,6 +46,8 @@ export class ChatGateway
   public afterInit(server: any) {
     console.log('WebSocket server initialized');
   }
+
+  // ************* 소켓에 auth & Guard 적용 후 exitRoom 에서 버그 발견.
 
   // 소켓 연결 후(?) 실행되는 메서드
   public async handleConnection(client: Socket, ...args: any[]) {
@@ -240,7 +239,7 @@ export class ChatGateway
   @SubscribeMessage('exitRoom')
   async exitRoom(client: Socket) {
     console.log(`before exit : ${client.data.roomId}, ${client.rooms.size}`);
-    if (client.data.roomId == null && client.rooms.size == 0) {
+    if (client.data.roomId == null || client.rooms.size == 0) {
       console.log('the client is not in any room');
       return;
     }
