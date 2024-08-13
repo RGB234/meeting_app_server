@@ -48,14 +48,13 @@ export class JwtAccessTokenStrategy extends PassportStrategy(
     // Check whether the authId in the payload matches the authId of the sender of the request.
     if ((req as Request).body) {
       console.log('5수');
-      // req.body.authId is not null After the request goes through AuthService.
-      if (
-        (req as Request).body.authId &&
-        payload.sub != (req as Request).body.authId
-      ) {
-        console.log('authId does not match access token payload');
-        throw new UnauthorizedException('ACCESS DENIED');
+      const authId = (req as Request).body.authId;
+      if (!authId || payload.sub !== authId) {
+        throw new UnauthorizedException(
+          authId ? 'ACCESS DENIED' : 'authId is null or undefined',
+        );
       }
+
       // req.user = payload;
       // return { sub: payload.sub, authEmail: payload.email };
       return payload;

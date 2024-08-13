@@ -5,29 +5,29 @@ const socket = io('http://localhost:80/chat', {
   auth: {
     access_token:
       // 'aaa',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWI0ODM3Zi0yYzE0LTQ5Y2YtYWM5NS0xNWQyYjhlZmM4ZGUiLCJhdXRoRW1haWwiOiJPeE9AbmF2ZXIuY29tIiwiaWF0IjoxNzIzMzcxNzkxLCJleHAiOjE3MjMzNzI5OTF9.84cJK5y7bycUrM0X2cvE1BXduGy9woNmzGzIMbahv3M',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3MWQ0N2JkYy0zNGFhLTRmNzAtODQ3Yy01OTJjYTQzMWRlOTkiLCJhdXRoRW1haWwiOiJPP09AbmF2ZXIuY29tIiwiaWF0IjoxNzIzNTMzMDgwLCJleHAiOjE3MjM1MzQyODB9.tAAplzVIUX_wZhPD98ffuEmAQr7EwpCRtv0rxYJx8ZA',
   },
   query: {
     userId: 11,
   },
 });
 
-socket.on('connect', (userId) => {
-  console.log('Connected to WebSocket server');
+// socket.on('connect', (userId) => {
+//   console.log('Connected to WebSocket server');
 
-  // 서버로 메시지 전송
-  socket.emit(`message', 'Hello from client! ${userId}`);
-});
+//   // 서버로 메시지 전송
+//   socket.emit(`message', 'Hello from client! ${userId}`);
+// });
 
 socket.on('message', (message) => {
   console.log('Message received from server:', message);
 });
 
-socket.on('disconnect', () => {
-  socket.emit('exitRoom');
+// socket.on('disconnect', () => {
+//   socket.emit('exitRoom');
 
-  console.log('Disconnected from WebSocket server');
-});
+//   console.log('Disconnected from WebSocket server');
+// });
 
 socket.emit(
   'matchRoom',
@@ -46,9 +46,9 @@ socket.emit(
 //   }),
 // );
 
-process.on('SIGINT', () => {
-  socket.emit('exitRoom');
+// process.on('SIGINT', () => {
+//   socket.emit('exitRoom');
 
-  console.log('Client disconnected');
-  process.exit();
-});
+//   console.log('Client disconnected');
+//   process.exit();
+// });

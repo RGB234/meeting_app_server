@@ -45,10 +45,10 @@ import { User } from 'src/user/user.entity';
 
     // register the Guard as a global guard
     // using the following construction in any module
-    {
-      provide: APP_GUARD,
-      useClass: JwtAccessTokenGuard,
-    },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: JwtAccessTokenGuard,
+    // },
     // {
     //   provide: APP_GUARD,
     //   useClass: JwtRefreshTokenGuard,

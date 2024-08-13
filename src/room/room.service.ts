@@ -115,7 +115,6 @@ export class RoomService {
       }
     });
 
-    console.log(`count of F/M : ${femaleCount} / ${maleCount}`);
     const updateRoomDto = new UpdateRoomDto();
     updateRoomDto.id = roomId;
     updateRoomDto.femaleCount = femaleCount;

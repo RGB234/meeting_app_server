@@ -31,12 +31,21 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
   }
 
   async validate(req: Request, payload: RefreshTokenPayload) {
-    const refreshToken = req?.cookies?.refresh_token;
-    const isValid = await this.authService.validateRefreshToken(
-      payload.sub,
-      refreshToken,
-    );
-    if (!isValid) throw new UnauthorizedException('Invalid refresh token');
+    // payload : decodeded JwtToken (e.g. refreshToken)
+
+    // const refreshToken = req?.cookies?.refresh_token;
+    // const isValid = await this.authService.validateRefreshToken(
+    //   req?.body?.authId,
+    //   refreshToken,
+    // );
+
+    const authId = req.body.authId;
+
+    const isValid = authId ? authId === payload.sub : false;
+    if (!isValid)
+      throw new UnauthorizedException(
+        'auth Id is null or undefined. JwtRefreshTokenStrategy validation fail',
+      );
     // request 에 리턴값 저장 : 코드를 작성하지 않아도 자동으로 PassportStrategy 가 수행하는 동작임
     // req.user = payload;
     return payload;

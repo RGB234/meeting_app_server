@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  ConnectedSocket,
+  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
   OnGatewayInit,
@@ -50,7 +52,10 @@ export class ChatGateway
   // ************* 소켓에 auth & Guard 적용 후 exitRoom 에서 버그 발견.
 
   // 소켓 연결 후(?) 실행되는 메서드
-  public async handleConnection(client: Socket, ...args: any[]) {
+  public async handleConnection(
+    @ConnectedSocket() client: Socket,
+    ...args: any[]
+  ) {
     const query = client.handshake.query;
     client.data.userId = query.userId;
     // 기본적으로 client.id 라는 room 에 참가된 상태로 초기화된다.
@@ -68,18 +73,20 @@ export class ChatGateway
   }
 
   // 소켓 연결 해제 전(?) 실행되는 메서드
-  public handleDisconnect(client: any) {
-    client.leave(client.data.roomId);
-    client.data.roomId = null;
+  public async handleDisconnect(client: any) {
+    // client.leave(client.data.roomId);
+    // client.data.roomId = null;
 
-    this.exitRoom(client);
+    await this.exitRoom(client);
 
     console.log(
       `client ${client.id} disconnected. userId - ${client.data.userId}, roomId - ${client.data.roomId}}`,
     );
   }
 
-  async checkClientIsNotInAnyRoom(client: Socket): Promise<boolean> {
+  async checkClientIsNotInAnyRoom(
+    @ConnectedSocket() client: Socket,
+  ): Promise<boolean> {
     if (client.data.roomId != null || client.rooms.size != 0) {
       console.log(
         `A room matched to the user already exists (client.rooms.size : ${client.rooms.size})`,
@@ -104,7 +111,10 @@ export class ChatGateway
 
   // message broadcasting
   @SubscribeMessage('message')
-  sendMessage(client: Socket, message: string): string {
+  sendMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() message: string,
+  ): string {
     const roomId = client.data.roomId;
 
     console.log(
@@ -123,7 +133,10 @@ export class ChatGateway
 
   // Join a room sellected by the matchmaker
   @SubscribeMessage('joinRoom')
-  async joinRoom(client: Socket, u2r: UserToRoomDto): Promise<boolean> {
+  async joinRoom(
+    @ConnectedSocket() client: Socket,
+    u2r: UserToRoomDto,
+  ): Promise<boolean> {
     // check if it's Unnecessary Request
     if (!(await this.checkClientIsNotInAnyRoom(client))) {
       await this.enterRoom(client);
@@ -145,7 +158,7 @@ export class ChatGateway
 
   // A client socket joins the room using userId-roomId mapping saved in the database
   @SubscribeMessage('enterRoom')
-  async enterRoom(client: Socket) {
+  async enterRoom(@ConnectedSocket() client: Socket) {
     if (client.data.roomId && client.rooms.size > 0) {
       // consider user already entered a room. (duplicated request)
       // return;
@@ -183,7 +196,10 @@ export class ChatGateway
     }),
   )
   @SubscribeMessage('matchRoom')
-  async matchRoomByCriteria(client: Socket, criteria: MatchCriteriaDto) {
+  async matchRoomByCriteria(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() criteria: MatchCriteriaDto,
+  ) {
     // check if it's Unnecessary Request
     if (!(await this.checkClientIsNotInAnyRoom(client))) {
       await this.enterRoom(client);
@@ -237,7 +253,7 @@ export class ChatGateway
   // By default, One user only can have one room at the same time.
   // but to handle cases where an error occurred and more than 2 rooms were joined, exit All joined rooms.
   @SubscribeMessage('exitRoom')
-  async exitRoom(client: Socket) {
+  async exitRoom(@ConnectedSocket() client: Socket) {
     console.log(`before exit : ${client.data.roomId}, ${client.rooms.size}`);
     if (client.data.roomId == null || client.rooms.size == 0) {
       console.log('the client is not in any room');
@@ -263,7 +279,7 @@ export class ChatGateway
   }
 
   @SubscribeMessage('deleteRoom')
-  async deleteRoom(client: Socket, roomId: string) {
+  async deleteRoom(@ConnectedSocket() client: Socket, roomId: string) {
     client.leave(client.data.roomId);
     client.data.roomId = null;
     await this.roomService.deleteRoom(roomId);

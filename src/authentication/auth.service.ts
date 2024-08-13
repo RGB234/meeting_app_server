@@ -74,7 +74,7 @@ export class AuthService {
 
   async logout(authId: string): Promise<void> {
     // Set refreshToken to null
-    this.storeRefreshToken(authId, null);
+    await this.storeRefreshToken(authId, '');
   }
 
   async issueAccessToken(auth: Authentication) {
@@ -126,10 +126,8 @@ export class AuthService {
       throw new BadRequestException('Invalid authId');
     }
 
-    // console.log('refresh token: ', refreshToken);
-    // if refresh token is null (Not allocated)
-    if (auth.refreshToken == null) {
-      // console.log('ERROR : refresh token is null');
+    if (auth.refreshToken == '') {
+      console.log('ERROR : refresh token is null');
       return false;
     }
 
@@ -139,7 +137,7 @@ export class AuthService {
 
   // refresh access token using a refresh token if that refresh token is valid.
   async refreshAccessToken(authId: string, refreshToken: string) {
-    const isValid = this.validateRefreshToken(authId, refreshToken);
+    const isValid = await this.validateRefreshToken(authId, refreshToken);
     if (!isValid) throw new UnauthorizedException('Invalid Refresh token');
 
     const auth = await this.getAuthById(authId);
