@@ -49,9 +49,7 @@ export class ChatGateway
     console.log('WebSocket server initialized');
   }
 
-  // ************* 소켓에 auth & Guard 적용 후 exitRoom 에서 버그 발견.
-
-  // 소켓 연결 후(?) 실행되는 메서드
+  // 소켓 연결 시 실행되는 메서드
   public async handleConnection(
     @ConnectedSocket() client: Socket,
     ...args: any[]
@@ -70,17 +68,29 @@ export class ChatGateway
     console.log(
       `client connected (id : ${client.id} - uid : ${client.data.userId}) : room (id : ${client.data.roomId})`,
     );
+
+    // 소켓 연결 해제 시 자동으로 disconnecting (a reserved event name) 이벤트 발생
+    // https://socket.io/docs/v4/server-socket-instance/#disconnect
+    // This event is similar to disconnect but is fired a bit earlier, ** when the Socket#rooms set is not empty yet **
+    client.on('disconnecting', async (reason) => {
+      console.log('< All rooms before disconnecting >');
+      client.rooms.forEach((room) => {
+        console.log(room);
+      });
+
+      await this.exitAllRooms(client);
+    });
   }
 
-  // 소켓 연결 해제 전(?) 실행되는 메서드
-  public async handleDisconnect(client: any) {
-    // client.leave(client.data.roomId);
-    // client.data.roomId = null;
-
-    await this.exitRoom(client);
-
+  // 소켓 연결 해제 시 실행되는 메서드
+  // 아마 disconnect 이벤트 발생 후로 생각됨. (the Socket#rooms set is empty)
+  public async handleDisconnect(
+    @ConnectedSocket() client: Socket,
+    ...args: any[]
+  ) {
+    // client.rooms is {}
     console.log(
-      `client ${client.id} disconnected. userId - ${client.data.userId}, roomId - ${client.data.roomId}}`,
+      `client ${client.id} disconnected. userId - ${client.data.userId}`,
     );
   }
 
@@ -122,7 +132,7 @@ export class ChatGateway
       message,
     );
 
-    // Broadcasting except this socket.
+    // Broadcasting except for the sender.
     client.to(roomId).emit('message', {
       senderUid: client.data.userId,
       message,
@@ -162,8 +172,9 @@ export class ChatGateway
     if (client.data.roomId && client.rooms.size > 0) {
       // consider user already entered a room. (duplicated request)
       // return;
+      console.log(`the size of rooms : ${client.rooms.size}`);
       throw new HttpException(
-        `The user already entered a room (${client.data.roomId}), the size of rooms : ${client.rooms.size}`,
+        `The user already entered a room (${client.data.roomId})`,
         HttpStatus.CONFLICT,
       );
     }
@@ -180,7 +191,7 @@ export class ChatGateway
     client.join(roomId);
 
     console.log(
-      `the client (${client.data.userId}) entered a room (${client.data.roomId})`,
+      `the client (${client.data.userId}) entered a room (${client.data.roomId}) rooms : ${client.rooms.size})`,
     );
   }
 
@@ -253,24 +264,32 @@ export class ChatGateway
   // By default, One user only can have one room at the same time.
   // but to handle cases where an error occurred and more than 2 rooms were joined, exit All joined rooms.
   @SubscribeMessage('exitRoom')
-  async exitRoom(@ConnectedSocket() client: Socket) {
+  async exitAllRooms(@ConnectedSocket() client: Socket) {
+    // client.rooms.size == 0 >>> ?????
+
     console.log(`before exit : ${client.data.roomId}, ${client.rooms.size}`);
     if (client.data.roomId == null || client.rooms.size == 0) {
       console.log('the client is not in any room');
       return;
     }
-    try {
-      client.rooms.forEach(async (room: string) => {
+    client.rooms.forEach(async (room: string) => {
+      try {
         await this.roomService.deleteUserToRoomRecord({
           userId: client.data.userId,
           roomId: room, // a element of the rooms is roomId (string)
         });
-      });
-    } catch (err) {
-      console.log(err);
-    }
+      } catch (err) {
+        if (
+          err instanceof HttpException &&
+          err.getStatus() === HttpStatus.NOT_FOUND
+        ) {
+          console.log(err.message);
+        }
+      }
+      await client.leave(room);
+    });
 
-    client.leave(client.data.roomId);
+    await client.leave(client.data.roomId);
     client.data.roomId = null;
 
     console.log(

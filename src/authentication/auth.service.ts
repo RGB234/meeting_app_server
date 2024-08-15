@@ -128,7 +128,7 @@ export class AuthService {
 
     if (auth.refreshToken == '') {
       console.log('ERROR : refresh token is null');
-      return false;
+      // return false;
     }
 
     // Not Encrypted yet (업데이트 예정)
