@@ -36,84 +36,80 @@ import { UserToRoomDto } from 'src/room/user-to-room-dto';
 export class ChatGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
-  MAX_CAPACITY = 4; // 방 최대 인원 제한수
+  private readonly MAX_CAPACITY = 4; // 방 최대 인원 제한수
+  @WebSocketServer() private server: any;
 
   constructor(
     private readonly roomService: RoomService,
     private readonly configService: ConfigService,
   ) {}
-  @WebSocketServer()
-  server: Server;
 
-  public afterInit(server: any) {
+  public afterInit(server: Server) {
     console.log('WebSocket server initialized');
   }
 
   // 소켓 연결 시 실행되는 메서드
   public async handleConnection(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() socket: Socket,
     ...args: any[]
   ) {
-    const query = client.handshake.query;
-    client.data.userId = query.userId;
+    const query = socket.handshake.query;
+    socket.data.userId = query.userId;
     // 기본적으로 client.id 라는 room 에 참가된 상태로 초기화된다.
     // client 는 동시에 한 개의 room 만 참여가능한 비즈니스 로직으로 구현할 것이다.
-    client.leave(client.id);
-    client.data.roomId = null;
+    socket.leave(socket.id);
+    socket.data.roomId = null;
 
     // Authentication
-    const accessToken = client.handshake.auth.access_token;
-    client.data.access_token = accessToken;
+    const accessToken = socket.handshake.auth.access_token;
+    socket.data.access_token = accessToken;
 
     console.log(
-      `client connected (id : ${client.id} - uid : ${client.data.userId}) : room (id : ${client.data.roomId})`,
+      `client connected (socket id : ${socket.id} - uid : ${socket.data.userId}) : room (id : ${socket.data.roomId})`,
     );
 
     // 소켓 연결 해제 시 자동으로 disconnecting (a reserved event name) 이벤트 발생
     // https://socket.io/docs/v4/server-socket-instance/#disconnect
     // This event is similar to disconnect but is fired a bit earlier, ** when the Socket#rooms set is not empty yet **
-    client.on('disconnecting', async (reason) => {
-      console.log('< All rooms before disconnecting >');
-      client.rooms.forEach((room) => {
-        console.log(room);
-      });
+    socket.on('disconnecting', async (reason) => {
+      // console.log('< All rooms before disconnecting >');
+      // client.rooms.forEach((room) => {
+      //   console.log(room);
+      // });
 
-      await this.exitAllRooms(client);
+      await this.exitAllRooms(socket);
     });
   }
 
   // 소켓 연결 해제 시 실행되는 메서드
   // 아마 disconnect 이벤트 발생 후로 생각됨. (the Socket#rooms set is empty)
   public async handleDisconnect(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() socket: Socket,
     ...args: any[]
   ) {
     // client.rooms is {}
     console.log(
-      `client ${client.id} disconnected. userId - ${client.data.userId}`,
+      `client ${socket.id} disconnected. userId - ${socket.data.userId}`,
     );
   }
 
-  async checkClientIsNotInAnyRoom(
-    @ConnectedSocket() client: Socket,
+  async checkClientIsNotInAnyRooms(
+    @ConnectedSocket() socket: Socket,
   ): Promise<boolean> {
-    if (client.data.roomId != null || client.rooms.size != 0) {
+    if (socket.data.roomId != null || socket.rooms.size != 0) {
       console.log(
-        `A room matched to the user already exists (client.rooms.size : ${client.rooms.size})`,
+        `A room matched to the user already exists (socket.rooms.size : ${socket.rooms.size})`,
       );
       return false;
     }
     const joinedRooms = await this.roomService.getAllJoinedRooms(
-      client.data.userId,
+      socket.data.userId,
     );
     if (joinedRooms.length > 0) {
       console.log(`< A user already joined a room >`);
       joinedRooms.forEach((room) => {
         console.log(room.id);
       });
-
-      // client.data.roomId = joinedRooms.at(0).id;
-      // client.join(client.data.roomId);
       return false;
     }
     return true;
@@ -122,42 +118,36 @@ export class ChatGateway
   // message broadcasting
   @SubscribeMessage('message')
   sendMessage(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() message: string,
-  ): string {
-    const roomId = client.data.roomId;
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() message: { string: string },
+  ): void {
+    const roomId = socket.data.roomId;
 
-    console.log(
-      `message to broadcast. received from client ${client.id}:`,
-      message,
-    );
+    console.log(`received from client ${socket.id}:`, message);
 
-    // Broadcasting except for the sender.
-    client.to(roomId).emit('message', {
-      senderUid: client.data.userId,
+    socket.broadcast.emit('message', {
+      senderUid: socket.data.userId,
       message,
     });
-
-    return;
   }
 
   // Join a room sellected by the matchmaker
   @SubscribeMessage('joinRoom')
   async joinRoom(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() socket: Socket,
     u2r: UserToRoomDto,
   ): Promise<boolean> {
     // check if it's Unnecessary Request
-    if (!(await this.checkClientIsNotInAnyRoom(client))) {
-      await this.enterRoom(client);
+    if (!(await this.checkClientIsNotInAnyRooms(socket))) {
+      await this.enterRoom(socket);
       return;
     }
 
     try {
       await this.roomService.createUserToRoomRecord({ userToRoom: u2r });
 
-      client.data.roomId = u2r.roomId;
-      client.join(u2r.roomId);
+      socket.data.roomId = u2r.roomId;
+      socket.join(u2r.roomId);
 
       return true;
     } catch (err) {
@@ -168,18 +158,18 @@ export class ChatGateway
 
   // A client socket joins the room using userId-roomId mapping saved in the database
   @SubscribeMessage('enterRoom')
-  async enterRoom(@ConnectedSocket() client: Socket) {
-    if (client.data.roomId && client.rooms.size > 0) {
+  async enterRoom(@ConnectedSocket() socket: Socket) {
+    if (socket.data.roomId && socket.rooms.size > 0) {
       // consider user already entered a room. (duplicated request)
       // return;
-      console.log(`the size of rooms : ${client.rooms.size}`);
+      console.log(`the size of rooms : ${socket.rooms.size}`);
       throw new HttpException(
-        `The user already entered a room (${client.data.roomId})`,
+        `The user already entered a room (${socket.data.roomId})`,
         HttpStatus.CONFLICT,
       );
     }
     const joinedRooms = await this.roomService.getAllJoinedRooms(
-      client.data.userId,
+      socket.data.userId,
     );
 
     if (joinedRooms.length == 0) {
@@ -187,11 +177,11 @@ export class ChatGateway
     }
 
     const roomId = joinedRooms.at(0).id;
-    client.data.roomId = roomId;
-    client.join(roomId);
+    socket.data.roomId = roomId;
+    socket.join(roomId);
 
     console.log(
-      `the client (${client.data.userId}) entered a room (${client.data.roomId}) rooms : ${client.rooms.size})`,
+      `the client (${socket.data.userId}) entered a room (${socket.data.roomId}) rooms : ${socket.rooms.size})`,
     );
   }
 
@@ -208,16 +198,16 @@ export class ChatGateway
   )
   @SubscribeMessage('matchRoom')
   async matchRoomByCriteria(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() socket: Socket,
     @MessageBody() criteria: MatchCriteriaDto,
   ) {
     // check if it's Unnecessary Request
-    if (!(await this.checkClientIsNotInAnyRoom(client))) {
-      await this.enterRoom(client);
+    if (!(await this.checkClientIsNotInAnyRooms(socket))) {
+      await this.enterRoom(socket);
       return;
     }
 
-    const userId = client.data.userId;
+    const userId = socket.data.userId;
     const rooms = await this.roomService.getRoomsByCriteria(criteria);
 
     const MAX_TRIAL = Math.min(rooms.length, 10);
@@ -233,7 +223,7 @@ export class ChatGateway
         u2r.userId = userId;
 
         try {
-          await this.joinRoom(client, u2r);
+          await this.joinRoom(socket, u2r);
         } catch (err) {
           console.log('Err occurred during joining the room :', err);
         }
@@ -249,14 +239,14 @@ export class ChatGateway
 
     const u2r = new UserToRoomDto();
     u2r.roomId = matchedRoom.id;
-    u2r.userId = client.data.userId;
+    u2r.userId = socket.data.userId;
 
     try {
-      await this.joinRoom(client, u2r);
+      await this.joinRoom(socket, u2r);
     } catch (err) {
       console.log('Matching ERROR :', err);
       // rollback
-      await this.deleteRoom(client, matchedRoom.id);
+      await this.deleteRoom(socket, matchedRoom.id);
     }
     return;
   }
@@ -264,18 +254,16 @@ export class ChatGateway
   // By default, One user only can have one room at the same time.
   // but to handle cases where an error occurred and more than 2 rooms were joined, exit All joined rooms.
   @SubscribeMessage('exitRoom')
-  async exitAllRooms(@ConnectedSocket() client: Socket) {
-    // client.rooms.size == 0 >>> ?????
-
-    console.log(`before exit : ${client.data.roomId}, ${client.rooms.size}`);
-    if (client.data.roomId == null || client.rooms.size == 0) {
+  async exitAllRooms(@ConnectedSocket() socket: Socket) {
+    // console.log(`before exit : ${socket.data.roomId}, ${socket.rooms.size}`);
+    if (socket.data.roomId == null || socket.rooms.size == 0) {
       console.log('the client is not in any room');
       return;
     }
-    client.rooms.forEach(async (room: string) => {
+    socket.rooms.forEach(async (room: string) => {
       try {
         await this.roomService.deleteUserToRoomRecord({
-          userId: client.data.userId,
+          userId: socket.data.userId,
           roomId: room, // a element of the rooms is roomId (string)
         });
       } catch (err) {
@@ -286,21 +274,21 @@ export class ChatGateway
           console.log(err.message);
         }
       }
-      await client.leave(room);
+      await socket.leave(room);
     });
 
-    await client.leave(client.data.roomId);
-    client.data.roomId = null;
+    await socket.leave(socket.data.roomId);
+    socket.data.roomId = null;
 
     console.log(
-      `client (${client.id}) exited room. roomID : ${client.data.roomId}, rooms: ${Object.values(client.rooms)}`,
+      `client (${socket.id}) exited room. roomID : ${socket.data.roomId}, rooms: ${Object.values(socket.rooms)}`,
     );
   }
 
   @SubscribeMessage('deleteRoom')
-  async deleteRoom(@ConnectedSocket() client: Socket, roomId: string) {
-    client.leave(client.data.roomId);
-    client.data.roomId = null;
+  async deleteRoom(@ConnectedSocket() socket: Socket, roomId: string) {
+    socket.leave(socket.data.roomId);
+    socket.data.roomId = null;
     await this.roomService.deleteRoom(roomId);
   }
 }

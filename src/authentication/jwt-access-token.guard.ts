@@ -24,12 +24,9 @@ export class JwtAccessTokenGuard extends AuthGuard('jwt_access_token') {
   }
 
   canActivate(context: ExecutionContext) {
-    console.log('1수');
-
     const requesType = context.getType();
 
     if (requesType == 'http') {
-      console.log('2수');
       const isPublic = this.reflector.getAllAndOverride<boolean>(
         IS_PUBLIC_KEY,
         [
@@ -43,7 +40,6 @@ export class JwtAccessTokenGuard extends AuthGuard('jwt_access_token') {
         return true;
       }
     }
-    console.log('3수');
     return super.canActivate(context);
   }
 }

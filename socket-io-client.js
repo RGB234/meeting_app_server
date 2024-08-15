@@ -1,11 +1,9 @@
-// client.js
 const io = require('socket.io-client');
 
-const socket = io('http://localhost:80/chat', {
+const socket = io('ws://localhost:80/chat', {
   auth: {
     access_token:
-      // 'aaa',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWI0ODM3Zi0yYzE0LTQ5Y2YtYWM5NS0xNWQyYjhlZmM4ZGUiLCJhdXRoRW1haWwiOiJPeE9AbmF2ZXIuY29tIiwiaWF0IjoxNzIzNzA5NTI5LCJleHAiOjE3MjM3MTA3Mjl9.k_mWnuCD5bFGc5F4fnFOYBrF5YQbYpIezJH0s39SEwE',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWI0ODM3Zi0yYzE0LTQ5Y2YtYWM5NS0xNWQyYjhlZmM4ZGUiLCJhdXRoRW1haWwiOiJPeE9AbmF2ZXIuY29tIiwiaWF0IjoxNzIzNzIyODk1LCJleHAiOjE3MjM3MjY0OTV9.98jd1ZAgFGZ20y9oZR3ev3XdnmNpDuqVekWE9pr0IcE',
   },
   query: {
     userId: 11,
@@ -17,32 +15,38 @@ const socket = io('http://localhost:80/chat', {
 socket.on('connect', () => {
   console.log('Connected to WebSocket server');
 
-  // 서버로 메시지 전송
-  socket.emit('message', { message: `client ${socket.id}} is connected` });
-
   socket.on('disconnect', () => {
     console.log('Disconnected from WebSocket server');
   });
 
-  // socket.on('disconnectecting', () => {
+  // socket.on('disconnecting', () => {
   //   console.log('Disconnected from WebSocket server2');
   // });
+
+  socket.on('message', (message) => {
+    console.log('Message received from server:', message);
+  });
 });
 
-socket.on('message', (message) => {
-  console.log('Message received from server:', message);
+// socket.emit(
+//   'matchRoom',
+//   (criteria = {
+//     location: '수원시 장안구',
+//     // maxFemaleCount: 1,
+//     maxMaleCount: 1,
+//   }),
+// );
+
+socket.emit('message', {
+  message: 'Nobody said it was easy.',
 });
 
-socket.emit(
-  'matchRoom',
-  (criteria = {
-    location: '수원시 장안구',
-    // maxFemaleCount: 1,
-    maxMaleCount: 1,
-  }),
-);
-
+// *************************************************************************
 // Intentional ERROR
+// 짧은 시간 연속적으로 matchRoom 이벤트를 보낼 경우
+// DB 를 읽는 과정에서 race condition 발생하여 버그발생
+// 추후 request Id 가 null 인 경우에만 해당 이벤트를 처리하는 방식으로 해결할 예정
+// *************************************************************************
 // socket.emit(
 //   'matchRoom',
 //   (criteria = {

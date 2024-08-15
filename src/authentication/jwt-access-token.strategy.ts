@@ -43,11 +43,8 @@ export class JwtAccessTokenStrategy extends PassportStrategy(
   // The validate method of a JwtStrategy will only be called when the correct secretKey is used to encrypt a token
   // and JWT is not expired.
   async validate(req: Request | Socket, payload: AccessTokenPayload) {
-    console.log('4수');
-
     // Check whether the authId in the payload matches the authId of the sender of the request.
     if ((req as Request).body) {
-      console.log('5수');
       const authId = (req as Request).body.authId;
       if (!authId || payload.sub !== authId) {
         throw new UnauthorizedException(
@@ -59,13 +56,10 @@ export class JwtAccessTokenStrategy extends PassportStrategy(
       // return { sub: payload.sub, authEmail: payload.email };
       return payload;
     } else if ((req as Socket).handshake) {
-      console.log('6수');
       if ((req as Socket).handshake.query?.userId) {
-        console.log('7수');
         const userId = Number((req as Socket).handshake.query.userId);
         const auth = await this.userService.getAuthByUserId(userId);
         if (auth != null && auth.id == payload.sub) {
-          console.log('8수');
           return payload;
         }
       } else {
