@@ -3,7 +3,7 @@ const io = require('socket.io-client');
 const socket = io('ws://localhost:80/chat', {
   auth: {
     access_token:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWI0ODM3Zi0yYzE0LTQ5Y2YtYWM5NS0xNWQyYjhlZmM4ZGUiLCJhdXRoRW1haWwiOiJPeE9AbmF2ZXIuY29tIiwiaWF0IjoxNzIzNzIyODk1LCJleHAiOjE3MjM3MjY0OTV9.98jd1ZAgFGZ20y9oZR3ev3XdnmNpDuqVekWE9pr0IcE',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWI0ODM3Zi0yYzE0LTQ5Y2YtYWM5NS0xNWQyYjhlZmM4ZGUiLCJhdXRoRW1haWwiOiJPeE9AbmF2ZXIuY29tIiwiaWF0IjoxNzIzODAzNzUyLCJleHAiOjE3MjM4MDczNTJ9.dBkJk87kTKvxFHQ_WZpzEmpgAVB0Pdx2FeZWIEMhjac',
   },
   query: {
     userId: 11,
@@ -28,14 +28,14 @@ socket.on('connect', () => {
   });
 });
 
-// socket.emit(
-//   'matchRoom',
-//   (criteria = {
-//     location: '수원시 장안구',
-//     // maxFemaleCount: 1,
-//     maxMaleCount: 1,
-//   }),
-// );
+socket.emit(
+  'matchRoom',
+  (criteria = {
+    location: '수원시 장안구',
+    maxFemaleCount: 4,
+    // maxMaleCount: 2,
+  }),
+);
 
 socket.emit('message', {
   message: 'Nobody said it was easy.',

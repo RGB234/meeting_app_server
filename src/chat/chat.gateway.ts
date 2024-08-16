@@ -55,9 +55,12 @@ export class ChatGateway
   ) {
     const query = socket.handshake.query;
     socket.data.userId = query.userId;
-    // 기본적으로 client.id 라는 room 에 참가된 상태로 초기화된다.
+    // 각 소켓마다 {socket.id} 라는 room 에 참가된 상태로 초기화된다.
     // client 는 동시에 한 개의 room 만 참여가능한 비즈니스 로직으로 구현할 것이다.
-    socket.leave(socket.id);
+
+    // {socket.id} room 에서 나가면 broadcasting 이 안됨을 확인하여, 해당 방에서 나가지 않도록 하였다.
+    // socket.leave(socket.id);
+
     socket.data.roomId = null;
 
     // Authentication
@@ -93,23 +96,24 @@ export class ChatGateway
     );
   }
 
-  async checkClientIsNotInAnyRooms(
+  // Does the Socket.rooms only have a element, {socket.id} ?
+  private checkSocketIsNotInAnyRooms(
     @ConnectedSocket() socket: Socket,
-  ): Promise<boolean> {
-    if (socket.data.roomId != null || socket.rooms.size != 0) {
-      console.log(
-        `A room matched to the user already exists (socket.rooms.size : ${socket.rooms.size})`,
-      );
-      return false;
-    }
-    const joinedRooms = await this.roomService.getAllJoinedRooms(
-      socket.data.userId,
-    );
-    if (joinedRooms.length > 0) {
-      console.log(`< A user already joined a room >`);
-      joinedRooms.forEach((room) => {
-        console.log(room.id);
-      });
+  ): boolean {
+    const hasOnlySocketId = () => {
+      for (const val of socket.rooms) {
+        if (val !== socket.id) {
+          return false;
+        }
+      }
+      return true;
+    };
+    if (!hasOnlySocketId()) {
+      console.log(`A room matched to the user already exists >>`);
+      for (const val of socket.rooms) {
+        if (val === socket.id) continue;
+        console.log(val);
+      }
       return false;
     }
     return true;
@@ -138,7 +142,7 @@ export class ChatGateway
     u2r: UserToRoomDto,
   ): Promise<boolean> {
     // check if it's Unnecessary Request
-    if (!(await this.checkClientIsNotInAnyRooms(socket))) {
+    if (!(await this.roomService.hasNoRoomsForUser(socket.data.userId))) {
       await this.enterRoom(socket);
       return;
     }
@@ -159,16 +163,16 @@ export class ChatGateway
   // A client socket joins the room using userId-roomId mapping saved in the database
   @SubscribeMessage('enterRoom')
   async enterRoom(@ConnectedSocket() socket: Socket) {
-    if (socket.data.roomId && socket.rooms.size > 0) {
-      // consider user already entered a room. (duplicated request)
-      // return;
-      console.log(`the size of rooms : ${socket.rooms.size}`);
-      throw new HttpException(
-        `The user already entered a room (${socket.data.roomId})`,
-        HttpStatus.CONFLICT,
-      );
+    if (!this.checkSocketIsNotInAnyRooms(socket)) {
+      // throw new HttpException(
+      //   `The user already entered a room (${socket.data.roomId})`,
+      //   HttpStatus.CONFLICT,
+      // );
+      console.log(`The user already entered a room (${socket.data.roomId})`);
+      return;
     }
-    const joinedRooms = await this.roomService.getAllJoinedRooms(
+
+    const joinedRooms = await this.roomService.getRoomsForUser(
       socket.data.userId,
     );
 
@@ -181,7 +185,7 @@ export class ChatGateway
     socket.join(roomId);
 
     console.log(
-      `the client (${socket.data.userId}) entered a room (${socket.data.roomId}) rooms : ${socket.rooms.size})`,
+      `the client (${socket.data.userId}) entered a room (${socket.data.roomId}))`,
     );
   }
 
@@ -202,7 +206,7 @@ export class ChatGateway
     @MessageBody() criteria: MatchCriteriaDto,
   ) {
     // check if it's Unnecessary Request
-    if (!(await this.checkClientIsNotInAnyRooms(socket))) {
+    if (!(await this.roomService.hasNoRoomsForUser(socket.data.userId))) {
       await this.enterRoom(socket);
       return;
     }
@@ -253,15 +257,16 @@ export class ChatGateway
 
   // By default, One user only can have one room at the same time.
   // but to handle cases where an error occurred and more than 2 rooms were joined, exit All joined rooms.
-  @SubscribeMessage('exitRoom')
+  @SubscribeMessage('exitAllRooms')
   async exitAllRooms(@ConnectedSocket() socket: Socket) {
-    // console.log(`before exit : ${socket.data.roomId}, ${socket.rooms.size}`);
-    if (socket.data.roomId == null || socket.rooms.size == 0) {
+    if (this.checkSocketIsNotInAnyRooms(socket)) {
       console.log('the client is not in any room');
       return;
     }
+
     socket.rooms.forEach(async (room: string) => {
       try {
+        if (room === socket.id) return;
         await this.roomService.deleteUserToRoomRecord({
           userId: socket.data.userId,
           roomId: room, // a element of the rooms is roomId (string)
@@ -277,7 +282,7 @@ export class ChatGateway
       await socket.leave(room);
     });
 
-    await socket.leave(socket.data.roomId);
+    // await socket.leave(socket.data.roomId);
     socket.data.roomId = null;
 
     console.log(

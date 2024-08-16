@@ -38,15 +38,46 @@ export class RoomService {
     return await this.roomRepo.findOneBy({ id: roomId });
   }
 
-  async getAllJoinedRooms(userId: number) {
-    const [userToRooms, count] = await this.userToRoomRepo.findAndCountBy({
-      userId,
-    });
-    const joinedRooms = userToRooms.map((e) => e.roomId); // number[]
+  async getRoomsForUser(userId: number): Promise<Room[]> {
+    const userToRooms = await this.userToRoomRepo.findBy({ userId });
+    if (userToRooms.length == 0) return [];
 
-    if (joinedRooms.length == 0) return [];
+    const joinedRoomIds = userToRooms.map((e) => e.roomId); // string[] - UUIDs
+    return await this.roomRepo.findBy({ id: In(joinedRoomIds) });
+  }
 
-    return this.roomRepo.findBy({ id: In(joinedRooms) });
+  async getUsersForRoom(roomId: string): Promise<User[]> {
+    // thre roomId format is UUID
+    const userToRooms = await this.userToRoomRepo.findBy({ roomId });
+    if (userToRooms.length == 0) return [];
+
+    const joinedUserIds = userToRooms.map((e) => e.userId); // number[]
+    return await this.userRepo.findBy({ id: In(joinedUserIds) });
+  }
+
+  // Are there no {userId} - {any room Ids} pairs in the database?
+  async hasNoRoomsForUser(userId: number): Promise<boolean> {
+    const joinedRooms = await this.getRoomsForUser(userId);
+    if (joinedRooms.length > 0) {
+      console.log(`< the Rooms for a user (${userId}) >`);
+      joinedRooms.forEach((room) => {
+        console.log(room.id);
+      });
+      return false;
+    }
+    return true;
+  }
+
+  async hasNoUsersForRoom(roomId: string): Promise<boolean> {
+    const joinedUsers = await this.getUsersForRoom(roomId);
+    if (joinedUsers.length > 0) {
+      console.log(`< User - Room paris >`);
+      joinedUsers.forEach((room) => {
+        console.log(room.id);
+      });
+      return false;
+    }
+    return true;
   }
 
   async getRoomsByCriteria(criteria: MatchCriteriaDto): Promise<Room[]> {
