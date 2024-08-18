@@ -7,9 +7,12 @@ import { Room } from 'src/room/room.entity';
 import { User } from 'src/user/user.entity';
 import { Authentication } from 'src/authentication/auth.entity';
 import { UUID } from 'crypto';
+import { Server, Namespace, Socket } from 'socket.io';
 
 @Injectable()
 export class ChatService {
+  private server: Server | Namespace;
+
   constructor(
     private dataSource: DataSource,
 
@@ -25,6 +28,14 @@ export class ChatService {
     @InjectRepository(Authentication)
     private authRepository: Repository<Authentication>,
   ) {}
+
+  // **** socket ****
+  setServer(server: Server | Namespace) {
+    this.server = server;
+  }
+
+  async verifyClient(socket: Socket, next: Function) {}
+  // **** socket ****
 
   findAllMessages(): Promise<Message[]> {
     return this.messagesRepository.find();

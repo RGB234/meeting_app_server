@@ -1,12 +1,17 @@
-const io = require('socket.io-client');
+// const io = require('socket.io-client');
+import { io } from 'socket.io-client';
 
 const socket = io('ws://localhost:80/chat', {
-  auth: {
-    access_token:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWI0ODM3Zi0yYzE0LTQ5Y2YtYWM5NS0xNWQyYjhlZmM4ZGUiLCJhdXRoRW1haWwiOiJPeE9AbmF2ZXIuY29tIiwiaWF0IjoxNzIzODAzNzUyLCJleHAiOjE3MjM4MDczNTJ9.dBkJk87kTKvxFHQ_WZpzEmpgAVB0Pdx2FeZWIEMhjac',
-  },
   query: {
     userId: 11,
+  },
+  extraHeaders: {
+    // URL, userId, iat(issued at)
+    // "idempotency-key" : "",
+    // JWT
+    // Bearer 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWI0ODM3Zi0yYzE0LTQ5Y2YtYWM5NS0xNWQyYjhlZmM4ZGUiLCJhdXRoRW1haWwiOiJPeE9AbmF2ZXIuY29tIiwiaWF0IjoxNzIzODAzNzUyLCJleHAiOjE3MjM4MDczNTJ9.dBkJk87kTKvxFHQ_WZpzEmpgAVB0Pdx2FeZWIEMhjac',
+    Authorization:
+      'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWI0ODM3Zi0yYzE0LTQ5Y2YtYWM5NS0xNWQyYjhlZmM4ZGUiLCJhdXRoRW1haWwiOiJPeE9AbmF2ZXIuY29tIiwiaWF0IjoxNzIzODAzNzUyLCJleHAiOjE3MjM4MDczNTJ9.dBkJk87kTKvxFHQ_WZpzEmpgAVB0Pdx2FeZWIEMhjac',
   },
 });
 

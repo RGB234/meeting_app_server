@@ -64,7 +64,8 @@ export class ChatGateway
     socket.data.roomId = null;
 
     // Authentication
-    const accessToken = socket.handshake.auth.access_token;
+    let accessToken = socket.handshake.headers.authorization;
+    accessToken = accessToken.split(' ')[1];
     socket.data.access_token = accessToken;
 
     console.log(

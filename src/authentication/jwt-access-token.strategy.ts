@@ -21,7 +21,12 @@ export class JwtAccessTokenStrategy extends PassportStrategy(
       jwtFromRequest: ExtractJwt.fromExtractors([
         (request: Request | Socket) => {
           if ((request as Socket).handshake) {
-            return (request as Socket).handshake.auth?.access_token;
+            // return (request as Socket).handshake.headers.authorization;
+            let accessToken = (request as Socket).handshake.headers
+              .authorization;
+            // {Bearer, accessToken}
+            accessToken = accessToken.split(' ')[1];
+            return accessToken;
           }
           if ((request as Request).cookies) {
             return (request as Request).cookies.access_token;
@@ -56,7 +61,7 @@ export class JwtAccessTokenStrategy extends PassportStrategy(
       // return { sub: payload.sub, authEmail: payload.email };
       return payload;
     } else if ((req as Socket).handshake) {
-      if ((req as Socket).handshake.query?.userId) {
+      if ((req as Socket).handshake.query.userId) {
         const userId = Number((req as Socket).handshake.query.userId);
         const auth = await this.userService.getAuthByUserId(userId);
         if (auth != null && auth.id == payload.sub) {
