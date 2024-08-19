@@ -9,11 +9,26 @@ import { AuthModule } from './authentication/auth.module';
 import { RoomModule } from './room/room.module';
 import { JwtModule } from '@nestjs/jwt';
 
+import type { RedisClientOptions } from 'redis';
+import * as redisStore from 'cache-manager-redis-store';
+import { CacheModule } from '@nestjs/cache-manager';
+
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+    }),
+    CacheModule.register<RedisClientOptions>({
+      store: redisStore,
+      socket: {
+        host: process.env.REDIS_HOST,
+        port: 6379,
+      },
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
