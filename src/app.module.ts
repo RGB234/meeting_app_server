@@ -9,13 +9,12 @@ import { AuthModule } from './authentication/auth.module';
 import { RoomModule } from './room/room.module';
 import { JwtModule } from '@nestjs/jwt';
 
-import type { RedisClientOptions } from 'redis';
-import * as redisStore from 'cache-manager-redis-store';
+// import type { RedisClientOptions } from 'redis';
+// import * as redisStore from 'cache-manager-redis-store';
+import { redisStore } from 'cache-manager-redis-yet';
 import { CacheModule } from '@nestjs/cache-manager';
 
-import * as dotenv from 'dotenv';
-
-dotenv.config();
+// import * as dotenv from 'dotenv';
 
 @Module({
   imports: [
@@ -23,11 +22,18 @@ dotenv.config();
       isGlobal: true,
       envFilePath: '.env',
     }),
-    CacheModule.register<RedisClientOptions>({
-      store: redisStore,
-      socket: {
-        host: process.env.REDIS_HOST,
-        port: 6379,
+    CacheModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => {
+        const store = await redisStore({
+          socket: {
+            host: configService.get<string>('REDIS_HOST'),
+            port: configService.get<number>('REDIS_PORT'),
+          },
+          // ms
+          ttl: 3 * 1000,
+        });
+        return { store };
       },
     }),
     TypeOrmModule.forRootAsync({

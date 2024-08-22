@@ -18,6 +18,8 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtAccessTokenGuard } from 'src/authentication/jwt-access-token.guard';
+import { IdempotencyService } from 'src/idempotency/idempotency.service';
+import { WsIdempotencyGuard } from 'src/idempotency/ws-idempotency.guard';
 import { MatchCriteriaDto } from 'src/room/match-room-dto';
 import { Room } from 'src/room/room.entity';
 import { RoomService } from 'src/room/room.service';
@@ -42,6 +44,7 @@ export class ChatGateway
   constructor(
     private readonly roomService: RoomService,
     private readonly configService: ConfigService,
+    private readonly idempotencyService: IdempotencyService,
   ) {}
 
   public afterInit(server: Server) {
@@ -71,6 +74,9 @@ export class ChatGateway
     console.log(
       `client connected (socket id : ${socket.id} - uid : ${socket.data.userId}) : room (id : ${socket.data.roomId})`,
     );
+
+    // Grant idempotency key
+    await this.idempotencyService.issueIdempotencyKey(socket);
 
     // 소켓 연결 해제 시 자동으로 disconnecting (a reserved event name) 이벤트 발생
     // https://socket.io/docs/v4/server-socket-instance/#disconnect
@@ -201,6 +207,7 @@ export class ChatGateway
       whitelist: true,
     }),
   )
+  @UseGuards(WsIdempotencyGuard)
   @SubscribeMessage('matchRoom')
   async matchRoomByCriteria(
     @ConnectedSocket() socket: Socket,

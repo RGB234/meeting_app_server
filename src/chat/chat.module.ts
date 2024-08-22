@@ -12,10 +12,13 @@ import { RoomService } from 'src/room/room.service';
 import { UserService } from 'src/user/user.service';
 import { AuthService } from 'src/authentication/auth.service';
 import { JwtAccessTokenStrategy } from 'src/authentication/jwt-access-token.strategy';
+import { IdempotencyService } from 'src/idempotency/idempotency.service';
+import { RedisCacheModule } from 'src/cache/redis.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Message, Room, User, Authentication, UserToRoom]),
+    RedisCacheModule,
   ],
   //   If you want to use the repository outside of the module
   //   which imports TypeOrmModule.forFeature,
@@ -29,6 +32,7 @@ import { JwtAccessTokenStrategy } from 'src/authentication/jwt-access-token.stra
     UserService,
     AuthService,
     JwtAccessTokenStrategy,
+    IdempotencyService,
   ],
   // controllers: [ChatController],
 })

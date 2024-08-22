@@ -6,10 +6,9 @@ const socket = io('ws://localhost:80/chat', {
     userId: 11,
   },
   extraHeaders: {
-    // URL, userId, iat(issued at)
-    // "idempotency-key" : "",
+    // UUID
+    'idempotency-key': 'Bearer 83346fe1-7bd9-4dff-88fe-57244fc4763d',
     // JWT
-    // Bearer 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWI0ODM3Zi0yYzE0LTQ5Y2YtYWM5NS0xNWQyYjhlZmM4ZGUiLCJhdXRoRW1haWwiOiJPeE9AbmF2ZXIuY29tIiwiaWF0IjoxNzIzODAzNzUyLCJleHAiOjE3MjM4MDczNTJ9.dBkJk87kTKvxFHQ_WZpzEmpgAVB0Pdx2FeZWIEMhjac',
     Authorization:
       'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWI0ODM3Zi0yYzE0LTQ5Y2YtYWM5NS0xNWQyYjhlZmM4ZGUiLCJhdXRoRW1haWwiOiJPeE9AbmF2ZXIuY29tIiwiaWF0IjoxNzIzODAzNzUyLCJleHAiOjE3MjM4MDczNTJ9.dBkJk87kTKvxFHQ_WZpzEmpgAVB0Pdx2FeZWIEMhjac',
   },

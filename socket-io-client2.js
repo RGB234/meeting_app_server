@@ -3,7 +3,7 @@ const io = require('socket.io-client');
 const socket = io('ws://localhost:80/chat', {
   auth: {
     access_token:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3MWQ0N2JkYy0zNGFhLTRmNzAtODQ3Yy01OTJjYTQzMWRlOTkiLCJhdXRoRW1haWwiOiJPP09AbmF2ZXIuY29tIiwiaWF0IjoxNzIzODAzNzIwLCJleHAiOjE3MjM4MDczMjB9.k18_cMsdHPKLnF70oPPKCzAqjfo1jfExvRUdw7XtXdw',
+      'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3MWQ0N2JkYy0zNGFhLTRmNzAtODQ3Yy01OTJjYTQzMWRlOTkiLCJhdXRoRW1haWwiOiJPP09AbmF2ZXIuY29tIiwiaWF0IjoxNzIzODAzNzIwLCJleHAiOjE3MjM4MDczMjB9.k18_cMsdHPKLnF70oPPKCzAqjfo1jfExvRUdw7XtXdw',
   },
   query: {
     userId: 12,

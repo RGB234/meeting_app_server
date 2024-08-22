@@ -5,7 +5,7 @@ import { RedisCacheModule } from 'src/cache/redis.module';
 @Module({
   imports: [RedisCacheModule],
   providers: [IdempotencyService],
-  exports: [],
+  exports: [IdempotencyService],
   controllers: [],
 })
 export class IdempotencyModule {}
