@@ -8,13 +8,7 @@ import { UserModule } from './user/user.module';
 import { AuthModule } from './authentication/auth.module';
 import { RoomModule } from './room/room.module';
 import { JwtModule } from '@nestjs/jwt';
-
-// import type { RedisClientOptions } from 'redis';
-// import * as redisStore from 'cache-manager-redis-store';
-import { redisStore } from 'cache-manager-redis-yet';
-import { CacheModule } from '@nestjs/cache-manager';
-
-// import * as dotenv from 'dotenv';
+import { RedisCacheModule } from './cache/redis.module';
 
 @Module({
   imports: [
@@ -22,20 +16,7 @@ import { CacheModule } from '@nestjs/cache-manager';
       isGlobal: true,
       envFilePath: '.env',
     }),
-    CacheModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => {
-        const store = await redisStore({
-          socket: {
-            host: configService.get<string>('REDIS_HOST'),
-            port: configService.get<number>('REDIS_PORT'),
-          },
-          // ms
-          ttl: 3 * 1000,
-        });
-        return { store };
-      },
-    }),
+    RedisCacheModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
