@@ -75,7 +75,6 @@ export class ChatGateway
       `client connected (socket id : ${socket.id} - uid : ${socket.data.userId}) : room (id : ${socket.data.roomId})`,
     );
 
-    // Grant idempotency key
     await this.idempotencyService.issueIdempotencyKey(socket);
 
     // 소켓 연결 해제 시 자동으로 disconnecting (a reserved event name) 이벤트 발생
@@ -196,6 +195,8 @@ export class ChatGateway
     );
   }
 
+  //
+
   // Match making
   // 1. 검색 기준에 맞는 방 탐색
   // 2-a 탐색 결과가 있음 : 탐색한 방 중에서 무작위로 입장 시도. 일정 횟수 내에 입장 실패시 3번으로
@@ -218,6 +219,9 @@ export class ChatGateway
       await this.enterRoom(socket);
       return;
     }
+
+    const idempotencyKey = socket.handshake.headers['idempotent-key'] as string;
+    await this.idempotencyService.saveIdempotencyKey(idempotencyKey, socket);
 
     const userId = socket.data.userId;
     const rooms = await this.roomService.getRoomsByCriteria(criteria);
@@ -259,6 +263,8 @@ export class ChatGateway
       console.log('Matching ERROR :', err);
       // rollback
       await this.deleteRoom(socket, matchedRoom.id);
+    } finally {
+      await this.idempotencyService.deleteIdempotencyKey(idempotencyKey);
     }
     return;
   }
