@@ -20,7 +20,8 @@ export class IdempotencyService {
     // );
 
     // socket.handshake.headers 의 필드 중 하나에 idempotency Key 저장
-    socket.handshake.headers['idempotent-key'] = idempotencyKey;
+    // socket.handshake.headers['idempotent-key'] = 'Bearer ' + idempotencyKey;
+    socket.data.requestId = 'Bearer ' + idempotencyKey;
     return idempotencyKey;
   }
 
@@ -33,28 +34,36 @@ export class IdempotencyService {
 
   async saveIdempotencyKey(key: string, socket: Socket) {
     if (await this.keyExists(key)) {
+      console.log('duplicated idempotency key');
       return;
     }
+    console.log(
+      'save idempotency key-value : ',
+      key,
+      '-',
+      socket.handshake.query.userId,
+    );
     await this.cacheManager.set(key, socket.handshake.query.userId);
   }
 
   // Must be executed after completing a task that requires idempotency
   async deleteIdempotencyKey(key: string) {
+    console.log('delete idempotency key-value : ', key);
     await this.cacheManager.del(key);
   }
 
   // check if a key is in the redis cache storage
   async validateWsIdempotencyKey(socket: Socket) {
-    let idempotencyKey = socket.request.headers['idempotency-key'].at(0);
-
+    // let idempotencyKey = socket.request.headers['idempotency-key'].at(0);
+    // [Bearer, {UUIDv4}]
+    let idempotencyKey = socket.data.requestId;
     if (!idempotencyKey) return false;
 
-    // [Bearer, {UUIDv4}]
-    idempotencyKey = idempotencyKey.split(' ').at(1);
-
     const value = await this.cacheManager.get(idempotencyKey);
-    if (value)
+    if (value) {
+      console.log(`duplicated idempotency key: ${idempotencyKey} : ${value}`);
       return false; // ttl 시간 내에 동일한 요청이 들어왔었음
-    else return true;
+      // return true;
+    } else return true;
   }
 }

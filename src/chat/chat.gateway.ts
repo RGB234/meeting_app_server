@@ -220,14 +220,13 @@ export class ChatGateway
       return;
     }
 
-    const idempotencyKey = socket.handshake.headers['idempotent-key'] as string;
+    const idempotencyKey = socket.data.requestId;
     await this.idempotencyService.saveIdempotencyKey(idempotencyKey, socket);
 
+    // try to enter a room that already exits ( ** random matching ** )
     const userId = socket.data.userId;
     const rooms = await this.roomService.getRoomsByCriteria(criteria);
-
     const MAX_TRIAL = Math.min(rooms.length, 10);
-
     let matchedRoom: Room;
     let trial = 1;
     while (rooms.length > 0 && trial <= MAX_TRIAL) {
@@ -243,6 +242,7 @@ export class ChatGateway
         } catch (err) {
           console.log('Err occurred during joining the room :', err);
         }
+        await this.idempotencyService.deleteIdempotencyKey(idempotencyKey);
         return;
       }
       trial++;
@@ -263,9 +263,8 @@ export class ChatGateway
       console.log('Matching ERROR :', err);
       // rollback
       await this.deleteRoom(socket, matchedRoom.id);
-    } finally {
-      await this.idempotencyService.deleteIdempotencyKey(idempotencyKey);
     }
+    await this.idempotencyService.deleteIdempotencyKey(idempotencyKey);
     return;
   }
 

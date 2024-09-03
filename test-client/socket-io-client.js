@@ -8,7 +8,7 @@ const socket = io('ws://localhost:80/chat', {
   extraHeaders: {
     // JWT
     Authorization:
-      'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWI0ODM3Zi0yYzE0LTQ5Y2YtYWM5NS0xNWQyYjhlZmM4ZGUiLCJhdXRoRW1haWwiOiJPeE9AbmF2ZXIuY29tIiwiaWF0IjoxNzIzODAzNzUyLCJleHAiOjE3MjM4MDczNTJ9.dBkJk87kTKvxFHQ_WZpzEmpgAVB0Pdx2FeZWIEMhjac',
+      'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MWI0ODM3Zi0yYzE0LTQ5Y2YtYWM5NS0xNWQyYjhlZmM4ZGUiLCJhdXRoRW1haWwiOiJPeE9AbmF2ZXIuY29tIiwiaWF0IjoxNzI1MzYzMTA3LCJleHAiOjE3MjUzNjY3MDd9.vkIrpbMAimdrdAySfhD1YCCSXgIhiNFH3M11hUmNw1M',
   },
 });
 
@@ -39,9 +39,30 @@ socket.emit(
   }),
 );
 
+// socket.emit(
+//   'matchRoom',
+//   (criteria = {
+//     location: '수원시 장안구',
+//     maxFemaleCount: 4,
+//     // maxMaleCount: 2,
+//   }),
+// );
+
 socket.emit('message', {
   message: 'Nobody said it was easy.',
 });
+
+setTimeout(() => {
+  console.log('1 seconds have passed!');
+  socket.emit(
+    'matchRoom',
+    (criteria = {
+      location: '수원시 장안구',
+      maxFemaleCount: 4,
+      // maxMaleCount: 2,
+    }),
+  );
+}, 1000);
 
 // *************************************************************************
 // Intentional ERROR
@@ -56,9 +77,9 @@ socket.emit('message', {
 //   }),
 // );
 
-// process.on('SIGINT', () => {
-//   socket.emit('exitRoom');
+process.on('SIGINT', () => {
+  socket.emit('exitRoom');
 
-//   console.log('Client disconnected');
-//   process.exit();
-// });
+  console.log('Client disconnected');
+  process.exit();
+});
